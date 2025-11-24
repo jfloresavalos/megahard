@@ -1,0 +1,271 @@
+"use client"
+
+import { useState } from 'react'
+
+interface Problema {
+  id: string
+  nombre: string
+  descripcion?: string | null
+}
+
+interface ModalAgregarProblemaProps {
+  isOpen: boolean
+  onClose: () => void
+  problemas: Problema[]
+  onSeleccionar: (problema: Problema) => void
+  onCrearNuevo: () => void
+}
+
+export default function ModalAgregarProblema({
+  isOpen,
+  onClose,
+  problemas,
+  onSeleccionar,
+  onCrearNuevo
+}: ModalAgregarProblemaProps) {
+  const [busqueda, setBusqueda] = useState('')
+
+  if (!isOpen) return null
+
+  const problemasFiltrados = problemas.filter(p =>
+    p.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  )
+
+  const MAX_RESULTADOS = 15
+  const problemasAMostrar = problemasFiltrados.slice(0, MAX_RESULTADOS)
+  const hayMas = problemasFiltrados.length > MAX_RESULTADOS
+
+  const handleSeleccionar = (problema: Problema) => {
+    onSeleccionar(problema)
+    setBusqueda('')
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: '1rem'
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          width: '100%',
+          maxWidth: '600px',
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)'
+        }}
+      >
+        {/* HEADER */}
+        <div style={{
+          padding: '1.5rem',
+          borderBottom: '2px solid #e5e7eb',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <h2 style={{
+            fontSize: '1.5rem',
+            fontWeight: 'bold',
+            margin: 0,
+            color: '#111827'
+          }}>
+            🔧 Agregar Problema
+          </h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '2rem',
+              color: '#6b7280',
+              cursor: 'pointer',
+              padding: 0,
+              width: '40px',
+              height: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '6px',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            ×
+          </button>
+        </div>
+
+        {/* BUSCADOR */}
+        <div style={{ padding: '1.5rem', borderBottom: '1px solid #e5e7eb' }}>
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar problema..."
+            autoFocus
+            style={{
+              width: '100%',
+              padding: '1rem',
+              border: '2px solid #3b82f6',
+              borderRadius: '8px',
+              fontSize: '1rem',
+              outline: 'none',
+              transition: 'border-color 0.2s'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+            onBlur={(e) => e.target.style.borderColor = '#3b82f6'}
+          />
+          <div style={{
+            marginTop: '0.5rem',
+            fontSize: '0.875rem',
+            color: '#6b7280'
+          }}>
+            {problemasFiltrados.length} resultado(s) encontrado(s)
+          </div>
+        </div>
+
+        {/* LISTA DE RESULTADOS */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '1rem'
+        }}>
+          {problemasAMostrar.length === 0 ? (
+            <div style={{
+              padding: '3rem 1rem',
+              textAlign: 'center',
+              color: '#9ca3af'
+            }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
+              <p style={{ margin: 0, fontSize: '1rem' }}>
+                {busqueda ? 'No se encontraron resultados' : 'Escribe para buscar problemas'}
+              </p>
+            </div>
+          ) : (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}>
+              {problemasAMostrar.map((problema) => (
+                <div
+                  key={problema.id}
+                  onClick={() => handleSeleccionar(problema)}
+                  style={{
+                    padding: '1rem 1.25rem',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    backgroundColor: 'white'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#3b82f6'
+                    e.currentTarget.style.backgroundColor = '#eff6ff'
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#e5e7eb'
+                    e.currentTarget.style.backgroundColor = 'white'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
+                >
+                  <div style={{
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: '#111827',
+                    marginBottom: problema.descripcion ? '0.5rem' : 0
+                  }}>
+                    {problema.nombre}
+                  </div>
+                  {problema.descripcion && (
+                    <div style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      lineHeight: '1.4'
+                    }}>
+                      {problema.descripcion}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {hayMas && (
+                <div style={{
+                  padding: '1rem',
+                  textAlign: 'center',
+                  color: '#6b7280',
+                  fontSize: '0.875rem',
+                  fontStyle: 'italic',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '8px'
+                }}>
+                  + {problemasFiltrados.length - MAX_RESULTADOS} problema(s) más...
+                  <div style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                    Refina tu búsqueda para ver más
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* FOOTER CON BOTÓN CREAR NUEVO */}
+        <div style={{
+          padding: '1.5rem',
+          borderTop: '2px solid #e5e7eb',
+          backgroundColor: '#f9fafb'
+        }}>
+          <button
+            onClick={() => {
+              onCrearNuevo()
+              onClose()
+            }}
+            style={{
+              width: '100%',
+              padding: '1rem',
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Crear Problema Nuevo
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

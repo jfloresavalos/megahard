@@ -1,0 +1,51 @@
+{
+  "name": "mega-hard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "seed:usuarios": "npx tsx prisma/seed-usuarios.ts",
+    "seed:sedes": "npx tsx prisma/seed-sedes.ts",
+    "seed:categorias": "npx tsx prisma/seed-categorias.ts",
+    "seed:productos": "npx tsx prisma/seed-productos.ts",
+    "seed:clientes": "npx tsx prisma/seed-clientes.ts",
+    "seed:servicios": "npx tsx prisma/seed-servicios.ts",
+    "seed:movimientos": "npx tsx prisma/seed-movimientos.ts",
+    "seed:all": "npm run seed:usuarios && npm run seed:sedes && npm run seed:categorias && npm run seed:productos && npm run seed:clientes && npm run seed:servicios && npm run seed:movimientos"
+  },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed-cliente-generico.ts"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@prisma/client": "^6.18.0",
+    "bcryptjs": "^3.0.2",
+    "date-fns": "^4.1.0",
+    "jspdf": "^3.0.3",
+    "jspdf-autotable": "^5.0.2",
+    "lucide-react": "^0.548.0",
+    "next": "^16.0.0",
+    "next-auth": "^4.24.12",
+    "prisma": "^6.18.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-hook-form": "^7.65.0",
+    "recharts": "^3.4.1",
+    "sheetjs-style": "^0.15.8",
+    "xlsx": "^0.18.5",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  }
+}
