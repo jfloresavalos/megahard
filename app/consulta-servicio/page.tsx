@@ -233,7 +233,7 @@ export default function ConsultaServicioPage() {
             fontWeight: '600',
             margin: 0
           }}>
-            📞 Contáctanos{config?.whatsapp ? ` al ${config.whatsapp}` : ''}
+            📞 Contáctanos al {config?.whatsapp || '992961703'}
           </p>
         </div>
 

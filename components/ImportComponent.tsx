@@ -365,6 +365,7 @@ export default function ImportComponent({
           ) : (
             <>
               <option value="">-- Selecciona una sede --</option>
+              <option value="TODAS">📍 TODAS LAS SEDES (distribución automática)</option>
               {sedes.map((sede) => (
                 <option key={sede.id} value={sede.id}>
                   {sede.nombre}

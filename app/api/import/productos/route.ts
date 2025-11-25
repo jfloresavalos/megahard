@@ -84,7 +84,7 @@ export async function POST(request: Request) {
 
     const formData = await request.formData()
     const archivo = formData.get('archivo') as File
-    const sedeId = formData.get('sedeId') as string // Nueva opción
+    const sedeId = formData.get('sedeId') as string // Nueva opción (puede ser ID de sede o "TODAS")
 
     if (!archivo) {
       return NextResponse.json({ error: 'No se proporcionó archivo' }, { status: 400 })
@@ -94,13 +94,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Debe seleccionar una sede' }, { status: 400 })
     }
 
-    // Validar que la sede exista
-    const sedeExiste = await prisma.sede.findUnique({
-      where: { id: sedeId }
-    })
+    // Validar que la sede exista (solo si no es "TODAS")
+    if (sedeId !== 'TODAS') {
+      const sedeExiste = await prisma.sede.findUnique({
+        where: { id: sedeId }
+      })
 
-    if (!sedeExiste) {
-      return NextResponse.json({ error: 'Sede no válida' }, { status: 400 })
+      if (!sedeExiste) {
+        return NextResponse.json({ error: 'Sede no válida' }, { status: 400 })
+      }
     }
 
     // Leer archivo
@@ -149,9 +151,10 @@ export async function POST(request: Request) {
         if (!nombre) throw new Error('Nombre es obligatorio')
         if (!categoria) throw new Error('Categoría es obligatoria')
         if (!subcategoria) throw new Error('Subcategoría es obligatoria')
-        if (isNaN(precioCompra) || precioCompra <= 0) throw new Error('Precio Compra inválido')
-        if (isNaN(precioVenta) || precioVenta <= precioCompra) throw new Error('Precio Venta debe ser mayor a Precio Compra')
-        if (!stockInputRaw) throw new Error('Stock Inicial es obligatorio')
+        if (isNaN(precioCompra) || precioCompra < 0) throw new Error('Precio Compra inválido (debe ser 0 o mayor)')
+        if (isNaN(precioVenta) || precioVenta < 0) throw new Error('Precio Venta inválido (debe ser 0 o mayor)')
+        if (precioCompra > 0 && precioVenta > 0 && precioVenta <= precioCompra) throw new Error('Precio Venta debe ser mayor a Precio Compra')
+        if (stockInputRaw === undefined || stockInputRaw === null) throw new Error('Stock Inicial es obligatorio')
 
         // Auto-crear categoría si no existe
         let catObj = await prisma.categoria.findUnique({
@@ -217,7 +220,7 @@ export async function POST(request: Request) {
             data: {
               codigo: codigoFinal,
               nombre,
-              descripcion: row['Descripción'] || '',
+              descripcion: row['Descripción'] ? String(row['Descripción']) : '',
               subcategoriaId: subObj.id,
               precioCompra,
               precioVenta
@@ -227,9 +230,9 @@ export async function POST(request: Request) {
 
         // Procesar distribución de stock
         const sedes = await prisma.sede.findMany()
-        
-        // Si sedeId está especificado, solo asignar a esa sede
-        if (sedeId) {
+
+        // Si sedeId está especificado (y no es "TODAS"), solo asignar a esa sede
+        if (sedeId && sedeId !== 'TODAS') {
           const stockNum = parseInt(String(stockInputRaw))
           if (isNaN(stockNum) || stockNum < 0) throw new Error('Stock debe ser un número válido')
           

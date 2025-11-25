@@ -142,9 +142,60 @@ export async function PUT(
     console.error('=== ERROR AL ACTUALIZAR ===')
     console.error(error)
     
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
       error: error.message || 'Error al actualizar usuario'
+    }, { status: 500 })
+  }
+}
+
+// DELETE - Eliminar usuario permanentemente
+export async function DELETE(
+  request: Request,
+  context: RouteParams
+) {
+  try {
+    const { id } = await context.params
+
+    // Verificar que el usuario existe
+    const usuario = await prisma.usuario.findUnique({
+      where: { id }
+    })
+
+    if (!usuario) {
+      return NextResponse.json({
+        success: false,
+        error: 'Usuario no encontrado'
+      }, { status: 404 })
+    }
+
+    // Eliminar el usuario permanentemente
+    await prisma.usuario.delete({
+      where: { id }
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'Usuario eliminado correctamente'
+    })
+  } catch (error: any) {
+    console.error('Error al eliminar usuario:', error)
+
+    // Si hay error de foreign key (el usuario está relacionado con otros datos)
+    // Códigos de Prisma: P2003, P2014
+    // Código de PostgreSQL: 23503 (foreign_key_violation), 23001 (restrict_violation)
+    if (error.code === 'P2003' || error.code === 'P2014' ||
+        (error.message && error.message.includes('foreign key')) ||
+        (error.message && error.message.includes('RESTRICT'))) {
+      return NextResponse.json({
+        success: false,
+        error: 'No se puede eliminar el usuario porque tiene registros asociados (ventas, servicios técnicos, etc.)'
+      }, { status: 400 })
+    }
+
+    return NextResponse.json({
+      success: false,
+      error: 'Error al eliminar usuario'
     }, { status: 500 })
   }
 }
