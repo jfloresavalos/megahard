@@ -65,18 +65,19 @@ async function main() {
   ]
 
   for (const usuario of usuariosIniciales) {
-    const passwordHash = await bcryptjs.hash(usuario.password, 10)
-    
+    // ⚠️ SIN HASH para desarrollo - password en texto plano
+
     await prisma.usuario.upsert({
       where: { email: usuario.email },
       update: {
+        password: usuario.password, // Actualizar password también
         sedeId: usuario.sedeId
       },
       create: {
         nombre: usuario.nombre,
         email: usuario.email,
         username: usuario.username,
-        password: passwordHash,
+        password: usuario.password, // Sin hashear
         rol: usuario.rol as any,
         activo: usuario.activo,
         sedeId: usuario.sedeId
