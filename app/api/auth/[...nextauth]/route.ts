@@ -1,6 +1,7 @@
 import NextAuth, { NextAuthOptions, User as NextAuthUser } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
+import bcrypt from "bcryptjs"
 
 // ✅ 1. SACA LAS OPCIONES A SU PROPIA CONSTANTE Y EXPÓRTALA
 export const authOptions: NextAuthOptions = {
@@ -25,8 +26,9 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        // ✅ SIMPLE: Comparación directa de contraseñas
-        if (user.password !== credentials.password) {
+        // ✅ Comparación con bcrypt
+        const isValidPassword = await bcrypt.compare(credentials.password, user.password)
+        if (!isValidPassword) {
           return null
         }
 
