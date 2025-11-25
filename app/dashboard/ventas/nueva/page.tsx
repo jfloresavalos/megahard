@@ -83,7 +83,7 @@ export default function NuevaVentaPage() {
   const [mostrarModalCliente, setMostrarModalCliente] = useState(false)
   const [nuevoCliente, setNuevoCliente] = useState({
     nombre: '',
-    documento: '',
+    numeroDoc: '',
     telefono: ''
   })
 
@@ -233,7 +233,7 @@ export default function NuevaVentaPage() {
   }
 
   const handleCrearCliente = async () => {
-    if (!nuevoCliente.nombre.trim() || !nuevoCliente.documento.trim()) {
+    if (!nuevoCliente.nombre.trim() || !nuevoCliente.numeroDoc.trim()) {
       mostrarToast('Nombre y documento son obligatorios', 'warning')
       return
     }
@@ -253,7 +253,7 @@ export default function NuevaVentaPage() {
         setClienteEncontrado(data.cliente)
         setBusquedaCliente(data.cliente.numeroDoc)
         setMostrarModalCliente(false)
-        setNuevoCliente({ nombre: '', documento: '', telefono: '' })
+        setNuevoCliente({ nombre: '', numeroDoc: '', telefono: '' })
       } else {
         mostrarToast(data.error || 'Error al crear cliente', 'error')
       }
@@ -1273,8 +1273,8 @@ export default function NuevaVentaPage() {
               </label>
               <input
                 type="text"
-                value={nuevoCliente.documento}
-                onChange={(e) => setNuevoCliente({ ...nuevoCliente, documento: e.target.value })}
+                value={nuevoCliente.numeroDoc}
+                onChange={(e) => setNuevoCliente({ ...nuevoCliente, numeroDoc: e.target.value })}
                 placeholder="DNI / RUC"
                 style={{
                   width: '100%',
