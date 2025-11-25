@@ -1306,6 +1306,26 @@ export default function VentasPage() {
               justifyContent: 'flex-end',
               flexDirection: isMobile ? 'column' : 'row'
             }}>
+              <button
+                onClick={() => window.open(`/comprobante/${ventaSeleccionada.id}`, '_blank')}
+                style={{
+                  padding: isMobile ? '0.875rem' : '0.75rem 1.5rem',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: isMobile ? '1rem' : '0.95rem',
+                  fontWeight: '600',
+                  order: isMobile ? 1 : 3,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                🖨️ Imprimir Comprobante
+              </button>
               {/* ✅ MODIFICADO: Solo mostrar botón de anular si NO está anulada */}
               {ventaSeleccionada.estado !== 'ANULADA' && (
                 <button
@@ -1319,7 +1339,7 @@ export default function VentasPage() {
                     cursor: 'pointer',
                     fontSize: isMobile ? '1rem' : '0.95rem',
                     fontWeight: '600',
-                    order: isMobile ? 1 : 2
+                    order: isMobile ? 2 : 2
                   }}
                 >
                   🗑️ Anular Venta
@@ -1336,7 +1356,7 @@ export default function VentasPage() {
                   cursor: 'pointer',
                   fontSize: isMobile ? '1rem' : '0.95rem',
                   fontWeight: '600',
-                  order: isMobile ? 2 : 1
+                  order: isMobile ? 3 : 1
                 }}
               >
                 Cerrar

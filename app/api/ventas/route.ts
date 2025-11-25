@@ -78,9 +78,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { clienteId, usuarioId, sedeId, items, metodoPago } = body
+    const { clienteId, usuarioId, sedeId, items, metodoPago, tipoComprobante } = body
 
-    console.log('📦 Datos recibidos:', { clienteId, usuarioId, sedeId, items, metodoPago })
+    console.log('📦 Datos recibidos:', { clienteId, usuarioId, sedeId, items, metodoPago, tipoComprobante })
 
     // Validaciones básicas
     if (!usuarioId || !sedeId) {
@@ -177,7 +177,7 @@ export async function POST(request: Request) {
       const venta = await tx.venta.create({
         data: {
           numeroVenta,
-          tipoComprobante: 'BOLETA',
+          tipoComprobante: tipoComprobante || 'BOLETA',
           clienteId: clienteId || null,
           usuarioId,
           sedeId,

@@ -9,6 +9,7 @@ interface Cliente {
   id: string
   nombre: string
   numeroDoc: string
+  tipoDoc: string
   telefono: string | null
 }
 
@@ -18,7 +19,7 @@ interface Sede {
 }
 
 
-interface MetodoPago {  // ✅ NUEVO
+interface MetodoPago {
   id: string
   nombre: string
 }
@@ -30,8 +31,8 @@ interface Producto {
   descripcion: string | null
   precioVenta: number
   stockMin: number
-  stockDisponible: number  // ✅ NUEVO
-  stockBajo: boolean       // ✅ NUEVO
+  stockDisponible: number
+  stockBajo: boolean
   subcategoria: {
     nombre: string
     categoria: {
@@ -58,22 +59,26 @@ export default function NuevaVentaPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const [isMobile, setIsMobile] = useState(false)
-  
+
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [sedes, setSedes] = useState<Sede[]>([])
   const [productos, setProductos] = useState<Producto[]>([])
-  const [metodosPago, setMetodosPago] = useState<MetodoPago[]>([])  // ✅ NUEVO
+  const [metodosPago, setMetodosPago] = useState<MetodoPago[]>([])
   const [clienteGenerico, setClienteGenerico] = useState<Cliente | null>(null)
   const [loadingClientes, setLoadingClientes] = useState(true)
   const [loadingProductos, setLoadingProductos] = useState(false)
   const [hasSearchedProductos, setHasSearchedProductos] = useState(false)
-  
+
   const [busquedaCliente, setBusquedaCliente] = useState("")
+  const [tipoDocBusqueda, setTipoDocBusqueda] = useState("DNI")
   const [clienteEncontrado, setClienteEncontrado] = useState<Cliente | null>(null)
   const [sedeId, setSedeId] = useState("")
-  const [metodoPago, setMetodoPago] = useState("")  // ✅ NUEVO
+  const [tipoComprobante, setTipoComprobante] = useState("BOLETA")
+  const [metodoPago, setMetodoPago] = useState("")
   const [items, setItems] = useState<ItemVenta[]>([])
   const [guardando, setGuardando] = useState(false)
+  const [ventaCreada, setVentaCreada] = useState<any>(null)
+  const [mostrarModalComprobante, setMostrarModalComprobante] = useState(false)
 
   // Modal productos
   const [mostrarModalProductos, setMostrarModalProductos] = useState(false)
@@ -82,9 +87,13 @@ export default function NuevaVentaPage() {
   // Modal crear cliente
   const [mostrarModalCliente, setMostrarModalCliente] = useState(false)
   const [nuevoCliente, setNuevoCliente] = useState({
+    tipoDoc: 'DNI',
     nombre: '',
     numeroDoc: '',
-    telefono: ''
+    telefono: '',
+    razonSocial: '',
+    direccion: '',
+    email: ''
   })
 
   const [toast, setToast] = useState<ToastState>({
@@ -158,7 +167,7 @@ export default function NuevaVentaPage() {
   const buscarProductos = async () => {
     // Validar que haya al menos 3 caracteres en la búsqueda
     if (busquedaProducto.trim().length < 3) {
-      mostrarToast('⚠️ Ingrese al menos 3 caracteres para buscar productos', 'warning')
+      mostrarToast('Ingrese al menos 3 caracteres para buscar productos', 'warning')
       return
     }
 
@@ -180,7 +189,7 @@ export default function NuevaVentaPage() {
 
       if (data.success) {
         setProductos(data.productos)
-        console.log(`📦 ${data.productos.length} productos cargados`)
+        console.log(`${data.productos.length} productos cargados`)
       } else {
         mostrarToast('Error al cargar productos', 'error')
       }
@@ -204,11 +213,36 @@ export default function NuevaVentaPage() {
       return
     }
 
-    const cliente = clientes.find(c => c.numeroDoc === busquedaCliente.trim())
-    
+    // Validar formato según tipo de documento
+    const numeroDoc = busquedaCliente.trim()
+
+    if (tipoDocBusqueda === 'DNI') {
+      if (!/^\d{8}$/.test(numeroDoc)) {
+        mostrarToast('El DNI debe tener exactamente 8 dígitos', 'warning')
+        return
+      }
+    } else if (tipoDocBusqueda === 'RUC') {
+      if (!/^\d{11}$/.test(numeroDoc)) {
+        mostrarToast('El RUC debe tener exactamente 11 dígitos', 'warning')
+        return
+      }
+    } else if (tipoDocBusqueda === 'CE') {
+      if (!/^\d{9}$/.test(numeroDoc)) {
+        mostrarToast('El CE debe tener exactamente 9 dígitos', 'warning')
+        return
+      }
+    } else if (tipoDocBusqueda === 'PASAPORTE') {
+      if (!/^[A-Za-z0-9]{7,12}$/.test(numeroDoc)) {
+        mostrarToast('El Pasaporte debe tener entre 7 y 12 caracteres alfanuméricos', 'warning')
+        return
+      }
+    }
+
+    const cliente = clientes.find(c => c.numeroDoc === numeroDoc && c.tipoDoc === tipoDocBusqueda)
+
     if (cliente) {
       if (cliente.numeroDoc === '00000000') {
-        mostrarToast('Use el botón "Cliente Genérico" para ventas sin DNI', 'warning')
+        mostrarToast('Use el botón "Sin DNI" para ventas sin DNI', 'warning')
         return
       }
       setClienteEncontrado(cliente)
@@ -238,6 +272,31 @@ export default function NuevaVentaPage() {
       return
     }
 
+    // Validar formato según tipo de documento
+    const numeroDoc = nuevoCliente.numeroDoc.trim()
+
+    if (nuevoCliente.tipoDoc === 'DNI') {
+      if (!/^\d{8}$/.test(numeroDoc)) {
+        mostrarToast('El DNI debe tener exactamente 8 dígitos', 'warning')
+        return
+      }
+    } else if (nuevoCliente.tipoDoc === 'RUC') {
+      if (!/^\d{11}$/.test(numeroDoc)) {
+        mostrarToast('El RUC debe tener exactamente 11 dígitos', 'warning')
+        return
+      }
+    } else if (nuevoCliente.tipoDoc === 'CE') {
+      if (!/^\d{9}$/.test(numeroDoc)) {
+        mostrarToast('El CE debe tener exactamente 9 dígitos', 'warning')
+        return
+      }
+    } else if (nuevoCliente.tipoDoc === 'PASAPORTE') {
+      if (!/^[A-Za-z0-9]{7,12}$/.test(numeroDoc)) {
+        mostrarToast('El Pasaporte debe tener entre 7 y 12 caracteres alfanuméricos', 'warning')
+        return
+      }
+    }
+
     try {
       const response = await fetch('/api/clientes', {
         method: 'POST',
@@ -252,8 +311,17 @@ export default function NuevaVentaPage() {
         setClientes([...clientes, data.cliente])
         setClienteEncontrado(data.cliente)
         setBusquedaCliente(data.cliente.numeroDoc)
+        setTipoDocBusqueda(data.cliente.tipoDoc)
         setMostrarModalCliente(false)
-        setNuevoCliente({ nombre: '', numeroDoc: '', telefono: '' })
+        setNuevoCliente({
+          tipoDoc: 'DNI',
+          nombre: '',
+          numeroDoc: '',
+          telefono: '',
+          razonSocial: '',
+          direccion: '',
+          email: ''
+        })
       } else {
         mostrarToast(data.error || 'Error al crear cliente', 'error')
       }
@@ -270,7 +338,7 @@ export default function NuevaVentaPage() {
 
   const handleAgregarProducto = (producto: Producto) => {
     const existe = items.find(item => item.productoId === producto.id)
-    
+
     if (existe) {
       mostrarToast('Producto ya agregado', 'warning')
       return
@@ -334,11 +402,11 @@ export default function NuevaVentaPage() {
       mostrarToast('Debe agregar al menos un producto', 'warning')
       return
     }
-    // ✅ NUEVO: Validar método de pago
-  if (!metodoPago) {
-    mostrarToast('Debe seleccionar un método de pago', 'warning')
-    return
-  }
+
+    if (!metodoPago) {
+      mostrarToast('Debe seleccionar un método de pago', 'warning')
+      return
+    }
 
     if (!session?.user?.id) {
       mostrarToast('No se pudo identificar el usuario', 'error')
@@ -346,7 +414,7 @@ export default function NuevaVentaPage() {
     }
 
     const sedeVenta = session.user.rol === 'admin' ? sedeId : session.user.sedeId
-    
+
     if (!sedeVenta) {
       mostrarToast('Debe seleccionar una sede', 'warning')
       return
@@ -359,7 +427,8 @@ export default function NuevaVentaPage() {
         clienteId: clienteEncontrado.id,
         usuarioId: session.user.id,
         sedeId: sedeVenta,
-        metodoPago,  // ✅ NUEVO
+        tipoComprobante,
+        metodoPago,
         items: items.map(item => ({
           productoId: item.productoId,
           cantidad: item.cantidad,
@@ -379,9 +448,12 @@ export default function NuevaVentaPage() {
 
       if (data.success) {
         mostrarToast('Venta registrada correctamente', 'success')
-        setTimeout(() => {
-          router.push('/dashboard/ventas')
-        }, 1500)
+        setVentaCreada(data.venta)
+        setMostrarModalComprobante(true)
+        // Limpiar formulario
+        setClienteEncontrado(null)
+        setBusquedaCliente('')
+        setItems([])
       } else {
         mostrarToast(data.error || 'Error al registrar venta', 'error')
       }
@@ -420,14 +492,14 @@ export default function NuevaVentaPage() {
             gap: '0.5rem'
           }}
         >
-          ← Volver a Ventas
+          Volver a Ventas
         </button>
         <h1 style={{
           fontSize: isMobile ? '1.5rem' : '2rem',
           fontWeight: 'bold',
           margin: 0
         }}>
-          🛒 Nueva Venta
+          Nueva Venta
         </h1>
       </div>
 
@@ -458,10 +530,27 @@ export default function NuevaVentaPage() {
 
           {!clienteEncontrado ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <select
+                  value={tipoDocBusqueda}
+                  onChange={(e) => setTipoDocBusqueda(e.target.value)}
+                  style={{
+                    padding: '0.625rem 0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem',
+                    backgroundColor: 'white',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="DNI">DNI</option>
+                  <option value="RUC">RUC</option>
+                  <option value="CE">CE</option>
+                  <option value="PASAPORTE">Pasaporte</option>
+                </select>
                 <input
                   type="text"
-                  placeholder="DNI / RUC..."
+                  placeholder={`${tipoDocBusqueda}...`}
                   value={busquedaCliente}
                   onChange={(e) => setBusquedaCliente(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleBuscarCliente()}
@@ -602,7 +691,62 @@ export default function NuevaVentaPage() {
             </select>
           </div>
         )}
-      {/* Método de Pago */}
+
+        {/* Tipo de Comprobante */}
+        <div style={{
+          paddingBottom: '1rem',
+          borderBottom: '1px solid #e5e7eb',
+          marginBottom: '1rem'
+        }}>
+          <h3 style={{
+            fontSize: '0.875rem',
+            fontWeight: '700',
+            color: '#6b7280',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: '0.75rem'
+          }}>
+            Tipo de Comprobante
+          </h3>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={() => setTipoComprobante('BOLETA')}
+              style={{
+                flex: 1,
+                padding: '0.75rem',
+                backgroundColor: tipoComprobante === 'BOLETA' ? '#3b82f6' : 'white',
+                color: tipoComprobante === 'BOLETA' ? 'white' : '#6b7280',
+                border: `2px solid ${tipoComprobante === 'BOLETA' ? '#3b82f6' : '#d1d5db'}`,
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                transition: 'all 0.2s'
+              }}
+            >
+              BOLETA
+            </button>
+            <button
+              onClick={() => setTipoComprobante('FACTURA')}
+              style={{
+                flex: 1,
+                padding: '0.75rem',
+                backgroundColor: tipoComprobante === 'FACTURA' ? '#3b82f6' : 'white',
+                color: tipoComprobante === 'FACTURA' ? 'white' : '#6b7280',
+                border: `2px solid ${tipoComprobante === 'FACTURA' ? '#3b82f6' : '#d1d5db'}`,
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                transition: 'all 0.2s'
+              }}
+            >
+              FACTURA
+            </button>
+          </div>
+        </div>
+
+        {/* Método de Pago */}
         <div style={{
           paddingBottom: '1rem',
           borderBottom: '1px solid #e5e7eb',
@@ -638,7 +782,8 @@ export default function NuevaVentaPage() {
               </option>
             ))}
           </select>
-        </div> 
+        </div>
+
         {/* Productos */}
         <div>
           <div style={{
@@ -877,7 +1022,7 @@ export default function NuevaVentaPage() {
                 paddingLeft: '1rem',
                 borderLeft: '1px solid #e5e7eb'
               }}>
-                {items.length} producto{items.length !== 1 ? 's' : ''} • {items.reduce((sum, item) => sum + item.cantidad, 0)} unidad{items.reduce((sum, item) => sum + item.cantidad, 0) !== 1 ? 'es' : ''}
+                {items.length} producto{items.length !== 1 ? 's' : ''} {items.reduce((sum, item) => sum + item.cantidad, 0)} unidad{items.reduce((sum, item) => sum + item.cantidad, 0) !== 1 ? 'es' : ''}
               </div>
             )}
           </div>
@@ -885,10 +1030,10 @@ export default function NuevaVentaPage() {
           <button
             onClick={handleGuardarVenta}
             disabled={
-              guardando || 
-              items.length === 0 || 
+              guardando ||
+              items.length === 0 ||
               !clienteEncontrado ||
-              !metodoPago ||  // ✅ NUEVO
+              !metodoPago ||
               (session?.user?.rol === 'admin' && !sedeId)
             }
             style={{
@@ -1028,7 +1173,7 @@ export default function NuevaVentaPage() {
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  {loadingProductos ? '⏳ Buscando...' : '🔍 Buscar'}
+                  {loadingProductos ? 'Buscando...' : 'Buscar'}
                 </button>
                 {hasSearchedProductos && (
                   <button
@@ -1045,7 +1190,7 @@ export default function NuevaVentaPage() {
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    🗑️ Limpiar
+                    Limpiar
                   </button>
                 )}
               </div>
@@ -1063,7 +1208,7 @@ export default function NuevaVentaPage() {
                   textAlign: 'center',
                   color: '#6b7280'
                 }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>-</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
                     Buscar Productos
                   </div>
@@ -1085,7 +1230,7 @@ export default function NuevaVentaPage() {
                   textAlign: 'center',
                   color: '#9ca3af'
                 }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>-</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>
                     No se encontraron productos
                   </div>
@@ -1095,11 +1240,10 @@ export default function NuevaVentaPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {productosFiltrados.map((producto) => {
                     const yaAgregado = items.some(item => item.productoId === producto.id)
-                    
-                    // ✅ Usar el stock real del producto
+
                     const stockDisponible = producto.stockDisponible
                     const stockBajo = producto.stockBajo
-                    
+
                     return (
                       <div
                         key={producto.id}
@@ -1151,10 +1295,9 @@ export default function NuevaVentaPage() {
                               color: '#6b7280',
                               marginBottom: '0.5rem'
                             }}>
-                              {producto.codigo} • {producto.subcategoria.categoria.nombre} › {producto.subcategoria.nombre}
+                              {producto.codigo} {producto.subcategoria.categoria.nombre} {producto.subcategoria.nombre}
                             </div>
-                            
-                            {/* ✅ Stock real */}
+
                             <div style={{
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -1172,10 +1315,10 @@ export default function NuevaVentaPage() {
                                 <line x1="12" y1="22.08" x2="12" y2="12"></line>
                               </svg>
                               {stockDisponible === 0 ? 'Sin stock' : `Stock: ${stockDisponible} unidades`}
-                              {stockBajo && stockDisponible > 0 && ' ⚠️'}
+                              {stockBajo && stockDisponible > 0 && ' '}
                             </div>
                           </div>
-                          
+
                           <div style={{
                             display: 'flex',
                             flexDirection: 'column',
@@ -1188,7 +1331,7 @@ export default function NuevaVentaPage() {
                               color: yaAgregado ? '#6b7280' : stockDisponible === 0 ? '#991b1b' : '#10b981',
                               whiteSpace: 'nowrap'
                             }}>
-                              {yaAgregado ? '✓ Agregado' : stockDisponible === 0 ? 'Sin stock' : `S/ ${Number(producto.precioVenta).toFixed(2)}`}
+                              {yaAgregado ? 'Agregado' : stockDisponible === 0 ? 'Sin stock' : `S/ ${Number(producto.precioVenta).toFixed(2)}`}
                             </div>
                           </div>
                         </div>
@@ -1227,7 +1370,9 @@ export default function NuevaVentaPage() {
               borderRadius: '12px',
               padding: isMobile ? '1.5rem' : '2rem',
               maxWidth: '500px',
-              width: '100%'
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto'
             }}
           >
             <h2 style={{
@@ -1245,13 +1390,137 @@ export default function NuevaVentaPage() {
                 fontSize: '0.875rem',
                 marginBottom: '0.5rem'
               }}>
-                Nombre *
+                Tipo de Documento *
+              </label>
+              <select
+                value={nuevoCliente.tipoDoc}
+                onChange={(e) => setNuevoCliente({ ...nuevoCliente, tipoDoc: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: isMobile ? '0.875rem' : '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: isMobile ? '1rem' : '0.95rem',
+                  backgroundColor: 'white',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="DNI">DNI</option>
+                <option value="RUC">RUC</option>
+                <option value="CE">CE</option>
+                <option value="PASAPORTE">Pasaporte</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{
+                display: 'block',
+                color: '#6b7280',
+                fontSize: '0.875rem',
+                marginBottom: '0.5rem'
+              }}>
+                Número de Documento *
+              </label>
+              <input
+                type="text"
+                value={nuevoCliente.numeroDoc}
+                onChange={(e) => setNuevoCliente({ ...nuevoCliente, numeroDoc: e.target.value })}
+                placeholder={
+                  nuevoCliente.tipoDoc === 'DNI' ? '8 dígitos' :
+                  nuevoCliente.tipoDoc === 'RUC' ? '11 dígitos' :
+                  nuevoCliente.tipoDoc === 'CE' ? '9 dígitos' :
+                  '7-12 caracteres alfanuméricos'
+                }
+                maxLength={
+                  nuevoCliente.tipoDoc === 'DNI' ? 8 :
+                  nuevoCliente.tipoDoc === 'RUC' ? 11 :
+                  nuevoCliente.tipoDoc === 'CE' ? 9 :
+                  12
+                }
+                style={{
+                  width: '100%',
+                  padding: isMobile ? '0.875rem' : '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: isMobile ? '1rem' : '0.95rem'
+                }}
+              />
+              <div style={{
+                fontSize: '0.75rem',
+                color: '#6b7280',
+                marginTop: '0.25rem'
+              }}>
+                {nuevoCliente.tipoDoc === 'DNI' && 'DNI: 8 dígitos numéricos'}
+                {nuevoCliente.tipoDoc === 'RUC' && 'RUC: 11 dígitos numéricos'}
+                {nuevoCliente.tipoDoc === 'CE' && 'CE: 9 dígitos numéricos'}
+                {nuevoCliente.tipoDoc === 'PASAPORTE' && 'Pasaporte: 7-12 caracteres alfanuméricos'}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{
+                display: 'block',
+                color: '#6b7280',
+                fontSize: '0.875rem',
+                marginBottom: '0.5rem'
+              }}>
+                {nuevoCliente.tipoDoc === 'RUC' ? 'Razón Social *' : 'Nombre *'}
               </label>
               <input
                 type="text"
                 value={nuevoCliente.nombre}
                 onChange={(e) => setNuevoCliente({ ...nuevoCliente, nombre: e.target.value })}
-                placeholder="Nombre completo"
+                placeholder={nuevoCliente.tipoDoc === 'RUC' ? 'Razón Social' : 'Nombre completo'}
+                style={{
+                  width: '100%',
+                  padding: isMobile ? '0.875rem' : '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: isMobile ? '1rem' : '0.95rem'
+                }}
+              />
+            </div>
+
+            {nuevoCliente.tipoDoc === 'RUC' && (
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{
+                  display: 'block',
+                  color: '#6b7280',
+                  fontSize: '0.875rem',
+                  marginBottom: '0.5rem'
+                }}>
+                  Razón Social (adicional)
+                </label>
+                <input
+                  type="text"
+                  value={nuevoCliente.razonSocial}
+                  onChange={(e) => setNuevoCliente({ ...nuevoCliente, razonSocial: e.target.value })}
+                  placeholder="Razón Social adicional"
+                  style={{
+                    width: '100%',
+                    padding: isMobile ? '0.875rem' : '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: isMobile ? '1rem' : '0.95rem'
+                  }}
+                />
+              </div>
+            )}
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{
+                display: 'block',
+                color: '#6b7280',
+                fontSize: '0.875rem',
+                marginBottom: '0.5rem'
+              }}>
+                Teléfono
+              </label>
+              <input
+                type="text"
+                value={nuevoCliente.telefono}
+                onChange={(e) => setNuevoCliente({ ...nuevoCliente, telefono: e.target.value })}
+                placeholder="Teléfono (opcional)"
                 style={{
                   width: '100%',
                   padding: isMobile ? '0.875rem' : '0.75rem',
@@ -1269,13 +1538,13 @@ export default function NuevaVentaPage() {
                 fontSize: '0.875rem',
                 marginBottom: '0.5rem'
               }}>
-                Documento *
+                Email
               </label>
               <input
-                type="text"
-                value={nuevoCliente.numeroDoc}
-                onChange={(e) => setNuevoCliente({ ...nuevoCliente, numeroDoc: e.target.value })}
-                placeholder="DNI / RUC"
+                type="email"
+                value={nuevoCliente.email}
+                onChange={(e) => setNuevoCliente({ ...nuevoCliente, email: e.target.value })}
+                placeholder="Email (opcional)"
                 style={{
                   width: '100%',
                   padding: isMobile ? '0.875rem' : '0.75rem',
@@ -1293,13 +1562,13 @@ export default function NuevaVentaPage() {
                 fontSize: '0.875rem',
                 marginBottom: '0.5rem'
               }}>
-                Teléfono
+                Dirección
               </label>
               <input
                 type="text"
-                value={nuevoCliente.telefono}
-                onChange={(e) => setNuevoCliente({ ...nuevoCliente, telefono: e.target.value })}
-                placeholder="Teléfono (opcional)"
+                value={nuevoCliente.direccion}
+                onChange={(e) => setNuevoCliente({ ...nuevoCliente, direccion: e.target.value })}
+                placeholder="Dirección (opcional)"
                 style={{
                   width: '100%',
                   padding: isMobile ? '0.875rem' : '0.75rem',
@@ -1346,7 +1615,131 @@ export default function NuevaVentaPage() {
                   order: isMobile ? 1 : 2
                 }}
               >
-                ✓ Crear Cliente
+                Crear Cliente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Comprobante */}
+      {mostrarModalComprobante && ventaCreada && (
+        <div
+          onClick={() => {
+            setMostrarModalComprobante(false)
+            router.push('/dashboard/ventas')
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: isMobile ? '1rem' : '2rem'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              padding: isMobile ? '1.5rem' : '2rem',
+              maxWidth: '500px',
+              width: '100%',
+              textAlign: 'center'
+            }}
+          >
+            <div style={{
+              width: '80px',
+              height: '80px',
+              backgroundColor: '#10b981',
+              borderRadius: '50%',
+              margin: '0 auto 1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '3rem'
+            }}>
+
+            </div>
+
+            <h2 style={{
+              fontSize: isMobile ? '1.5rem' : '1.75rem',
+              fontWeight: 'bold',
+              marginBottom: '0.5rem',
+              color: '#111827'
+            }}>
+              Venta Registrada!
+            </h2>
+
+            <p style={{
+              fontSize: '1.125rem',
+              fontWeight: '600',
+              color: '#3b82f6',
+              marginBottom: '1.5rem'
+            }}>
+              {ventaCreada.numeroVenta}
+            </p>
+
+            <p style={{
+              fontSize: '0.95rem',
+              color: '#6b7280',
+              marginBottom: '2rem'
+            }}>
+              Total: <strong style={{ fontSize: '1.25rem', color: '#10b981' }}>
+                S/ {Number(ventaCreada.total).toFixed(2)}
+              </strong>
+            </p>
+
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}>
+              <button
+                onClick={() => {
+                  window.open(`/comprobante/${ventaCreada.id}`, '_blank')
+                }}
+                style={{
+                  padding: '1rem',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                Ver / Imprimir Comprobante
+              </button>
+
+              <button
+                onClick={() => {
+                  setMostrarModalComprobante(false)
+                  router.push('/dashboard/ventas')
+                }}
+                style={{
+                  padding: '1rem',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '600'
+                }}
+              >
+                Volver a Ventas
               </button>
             </div>
           </div>

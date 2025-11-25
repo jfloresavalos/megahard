@@ -1,43 +1,26 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: Request,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
-    const { id } = await context.params;
-    const ventaId = id;
+    const { id } = await params
 
     const venta = await prisma.venta.findUnique({
-      where: { id: ventaId },
+      where: { id },
       include: {
-        cliente: {
+        cliente: true,
+        usuario: {
           select: {
             id: true,
             nombre: true,
-            numeroDoc: true,
-            telefono: true
+            username: true
           }
         },
-        usuario: {
-          select: {
-            nombre: true
-          }
-        },
-        sede: {
-          select: {
-            nombre: true
-          }
-        },
-        servicio: { // ✅ Incluir servicio relacionado
+        sede: true,
+        servicio: {
           select: {
             numeroServicio: true,
             tipoServicio: true
@@ -45,53 +28,33 @@ export async function GET(
         },
         items: {
           include: {
-            producto: {
-              select: {
-                codigo: true,
-                nombre: true,
-                descripcion: true
-              }
-            }
+            producto: true
           }
         },
         pagos: {
           include: {
-            metodoPago: {
-              select: {
-                nombre: true
-              }
-            }
+            metodoPago: true
           }
         }
       }
-    });
+    })
 
     if (!venta) {
       return NextResponse.json(
-        { error: 'Venta no encontrada' },
+        { success: false, error: 'Venta no encontrada' },
         { status: 404 }
-      );
+      )
     }
-
-    // ✅ LOG DETALLADO para debugging
-    console.log('📊 VENTA OBTENIDA:', {
-      id: venta.id,
-      numeroVenta: venta.numeroVenta,
-      servicioId: (venta as any).servicioId,
-      servicio: venta.servicio,
-      tieneServicio: !!venta.servicio
-    });
 
     return NextResponse.json({
       success: true,
       venta
-    });
-
-  } catch (error: any) {
-    console.error('❌ Error al obtener venta:', error);
+    })
+  } catch (error) {
+    console.error('Error al obtener venta:', error)
     return NextResponse.json(
-      { error: error.message || 'Error interno del servidor' },
+      { success: false, error: 'Error al obtener venta' },
       { status: 500 }
-    );
+    )
   }
 }

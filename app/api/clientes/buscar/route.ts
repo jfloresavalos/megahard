@@ -13,6 +13,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const numeroDoc = searchParams.get('numeroDoc');
+    const tipoDoc = searchParams.get('tipoDoc');
 
     if (!numeroDoc) {
       return NextResponse.json(
@@ -21,12 +22,18 @@ export async function GET(request: Request) {
       );
     }
 
-    // Buscar cliente por número de documento
+    // Buscar cliente por número de documento y tipo (si se proporciona)
+    const whereClause: any = {
+      numeroDoc: numeroDoc.trim(),
+      activo: true
+    };
+
+    if (tipoDoc) {
+      whereClause.tipoDoc = tipoDoc;
+    }
+
     const cliente = await prisma.cliente.findFirst({
-      where: {
-        numeroDoc: numeroDoc.trim(),
-        activo: true
-      }
+      where: whereClause
     });
 
     if (!cliente) {

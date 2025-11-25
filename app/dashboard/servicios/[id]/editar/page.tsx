@@ -592,9 +592,15 @@ const agregarProblema = (problema: any) => {
       // ✅ Combinar fotos existentes + nuevas
       const todasLasFotos = [...fotosExistentes, ...urlsFotosNuevas]
 
+      console.log('🔄 Enviando solicitud de actualización al servidor...')
+      
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 segundos timeout
+
       const response = await fetch(`/api/servicios/${servicioId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           clienteNombre,
           clienteDni,
@@ -619,12 +625,17 @@ const agregarProblema = (problema: any) => {
           garantiaDias: parseInt(garantiaDias),
           aCuenta: parseFloat(aCuenta),
           prioridad,
-          fotosEquipo: todasLasFotos,
-          descripcionProblema: descripcionProblema || problemasSeleccionados.map(p => p.nombre).join(', ')
+          fotosEquipo: todasLasFotos
         })
       })
 
+      clearTimeout(timeoutId)
+      
+      console.log('✅ Respuesta recibida del servidor:', response.status)
+
       const data = await response.json()
+      
+      console.log('📦 Datos de respuesta:', data)
 
       if (data.success) {
         alert(`✅ Servicio actualizado: ${numeroServicio}`)
@@ -632,9 +643,14 @@ const agregarProblema = (problema: any) => {
       } else {
         alert('❌ Error: ' + data.error)
       }
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Error al actualizar servicio')
+    } catch (error: any) {
+      console.error('❌ Error al actualizar:', error)
+      
+      if (error.name === 'AbortError') {
+        alert('⏱️ La solicitud tardó demasiado. Intente nuevamente.')
+      } else {
+        alert('❌ Error al actualizar servicio: ' + (error.message || 'Error desconocido'))
+      }
     } finally {
       setLoading(false)
     }

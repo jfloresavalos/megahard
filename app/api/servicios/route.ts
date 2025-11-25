@@ -87,6 +87,7 @@ export async function POST(request: Request) {
       clienteId, // ✅ Puede venir el ID del cliente
       clienteNombre,
       clienteDni,
+      clienteTipoDoc = 'DNI',
       clienteCelular,
       tecnicoId,
       sedeId,
@@ -149,9 +150,12 @@ export async function POST(request: Request) {
       // Ya viene el ID del cliente seleccionado
       clienteFinal = clienteId
     } else if (clienteDni) {
-      // Buscar si el cliente ya existe por DNI
+      // Buscar si el cliente ya existe por DNI y tipo de documento
       const clienteExistente = await prisma.cliente.findFirst({
-        where: { numeroDoc: clienteDni }
+        where: {
+          numeroDoc: clienteDni,
+          tipoDoc: clienteTipoDoc
+        }
       })
 
       if (clienteExistente) {
@@ -168,7 +172,7 @@ export async function POST(request: Request) {
         // Crear nuevo cliente
         const nuevoCliente = await prisma.cliente.create({
           data: {
-            tipoDoc: 'DNI',
+            tipoDoc: clienteTipoDoc,
             numeroDoc: clienteDni,
             nombre: clienteNombre,
             telefono: clienteCelular

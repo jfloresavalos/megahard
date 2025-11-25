@@ -6,6 +6,7 @@ interface Cliente {
   id: string
   nombre: string
   numeroDoc: string
+  tipoDoc: string
   telefono: string | null
 }
 
@@ -17,6 +18,8 @@ interface BuscadorClienteProps {
   onCambioNombre: (valor: string) => void
   onCambioDni: (valor: string) => void
   onCambioCelular: (valor: string) => void
+  tipoDoc?: string
+  onCambioTipoDoc?: (valor: string) => void
 }
 
 export default function BuscadorCliente({
@@ -26,51 +29,97 @@ export default function BuscadorCliente({
   clienteCelular,
   onCambioNombre,
   onCambioDni,
-  onCambioCelular
+  onCambioCelular,
+  tipoDoc = 'DNI',
+  onCambioTipoDoc
 }: BuscadorClienteProps) {
   const [busquedaDni, setBusquedaDni] = useState('')
+  const [tipoDocBusqueda, setTipoDocBusqueda] = useState('DNI')
   const [buscando, setBuscando] = useState(false)
   const [clienteEncontrado, setClienteEncontrado] = useState(false)
   const [mensaje, setMensaje] = useState('')
+  const [mostrarModalCrear, setMostrarModalCrear] = useState(false)
+  const [nuevoCliente, setNuevoCliente] = useState({
+    tipoDoc: 'DNI',
+    numeroDoc: '',
+    nombre: '',
+    telefono: '',
+    razonSocial: '',
+    direccion: '',
+    email: ''
+  })
 
   const buscarCliente = async () => {
-    if (busquedaDni.length < 8) {
-      setMensaje('⚠️ El DNI debe tener 8 dígitos')
+    if (!busquedaDni.trim()) {
+      setMensaje('⚠️ Ingrese un número de documento')
       setTimeout(() => setMensaje(''), 3000)
       return
+    }
+
+    const numeroDoc = busquedaDni.trim()
+
+    // Validar formato según tipo de documento
+    if (tipoDocBusqueda === 'DNI') {
+      if (!/^\d{8}$/.test(numeroDoc)) {
+        setMensaje('⚠️ El DNI debe tener exactamente 8 dígitos')
+        setTimeout(() => setMensaje(''), 3000)
+        return
+      }
+    } else if (tipoDocBusqueda === 'RUC') {
+      if (!/^\d{11}$/.test(numeroDoc)) {
+        setMensaje('⚠️ El RUC debe tener exactamente 11 dígitos')
+        setTimeout(() => setMensaje(''), 3000)
+        return
+      }
+    } else if (tipoDocBusqueda === 'CE') {
+      if (!/^\d{9}$/.test(numeroDoc)) {
+        setMensaje('⚠️ El CE debe tener exactamente 9 dígitos')
+        setTimeout(() => setMensaje(''), 3000)
+        return
+      }
+    } else if (tipoDocBusqueda === 'PASAPORTE') {
+      if (!/^[A-Za-z0-9]{7,12}$/.test(numeroDoc)) {
+        setMensaje('⚠️ El Pasaporte debe tener entre 7 y 12 caracteres alfanuméricos')
+        setTimeout(() => setMensaje(''), 3000)
+        return
+      }
     }
 
     setBuscando(true)
     setMensaje('')
 
     try {
-      console.log('🔍 Buscando cliente por DNI:', busquedaDni)
-      
-      // ✅ CORREGIDO: Usar endpoint específico de búsqueda por DNI
-      const response = await fetch(`/api/clientes/buscar?numeroDoc=${encodeURIComponent(busquedaDni)}`)
+      console.log('🔍 Buscando cliente:', { numeroDoc, tipoDoc: tipoDocBusqueda })
+
+      const response = await fetch(`/api/clientes/buscar?numeroDoc=${encodeURIComponent(numeroDoc)}&tipoDoc=${tipoDocBusqueda}`)
       const data = await response.json()
-      
+
       console.log('📦 Respuesta:', data)
-      
-      // ✅ CORREGIDO: Ahora verifica data.cliente (singular) en vez de data.clientes (plural)
+
       if (data.success && data.cliente) {
         const cliente = data.cliente
-        
+
         // Llenar los datos
         onClienteSeleccionado(cliente)
         onCambioNombre(cliente.nombre)
         onCambioDni(cliente.numeroDoc)
         onCambioCelular(cliente.telefono || '')
-        
+        if (onCambioTipoDoc) {
+          onCambioTipoDoc(cliente.tipoDoc)
+        }
+
         setClienteEncontrado(true)
         setMensaje('✅ Cliente encontrado en el sistema')
-        
+
         setTimeout(() => setMensaje(''), 3000)
       } else {
         setMensaje('⚠️ Cliente no encontrado. Complete los datos manualmente para registrarlo.')
         setClienteEncontrado(false)
-        onCambioDni(busquedaDni)
-        
+        onCambioDni(numeroDoc)
+        if (onCambioTipoDoc) {
+          onCambioTipoDoc(tipoDocBusqueda)
+        }
+
         setTimeout(() => setMensaje(''), 5000)
       }
     } catch (error) {
@@ -92,9 +141,20 @@ export default function BuscadorCliente({
     setMensaje('')
   }
 
-  const validarDni = (valor: string) => {
-    const soloNumeros = valor.replace(/\D/g, '').slice(0, 8)
-    onCambioDni(soloNumeros)
+  const validarDocumento = (valor: string, tipo: string) => {
+    if (tipo === 'DNI') {
+      const soloNumeros = valor.replace(/\D/g, '').slice(0, 8)
+      onCambioDni(soloNumeros)
+    } else if (tipo === 'RUC') {
+      const soloNumeros = valor.replace(/\D/g, '').slice(0, 11)
+      onCambioDni(soloNumeros)
+    } else if (tipo === 'CE') {
+      const soloNumeros = valor.replace(/\D/g, '').slice(0, 9)
+      onCambioDni(soloNumeros)
+    } else if (tipo === 'PASAPORTE') {
+      const alfanumerico = valor.replace(/[^A-Za-z0-9]/g, '').slice(0, 12)
+      onCambioDni(alfanumerico)
+    }
   }
 
   const validarCelular = (valor: string) => {
@@ -102,10 +162,120 @@ export default function BuscadorCliente({
     onCambioCelular(soloNumeros)
   }
 
+  const getMaxLength = () => {
+    if (tipoDocBusqueda === 'DNI') return 8
+    if (tipoDocBusqueda === 'RUC') return 11
+    if (tipoDocBusqueda === 'CE') return 9
+    if (tipoDocBusqueda === 'PASAPORTE') return 12
+    return 12
+  }
+
+  const getPlaceholder = () => {
+    if (tipoDocBusqueda === 'DNI') return 'Ingrese DNI (8 dígitos)...'
+    if (tipoDocBusqueda === 'RUC') return 'Ingrese RUC (11 dígitos)...'
+    if (tipoDocBusqueda === 'CE') return 'Ingrese CE (9 dígitos)...'
+    if (tipoDocBusqueda === 'PASAPORTE') return 'Ingrese Pasaporte (7-12 caracteres)...'
+    return 'Ingrese número de documento...'
+  }
+
+  const handleChangeBusqueda = (valor: string) => {
+    if (tipoDocBusqueda === 'PASAPORTE') {
+      setBusquedaDni(valor.replace(/[^A-Za-z0-9]/g, '').slice(0, 12))
+    } else {
+      setBusquedaDni(valor.replace(/\D/g, '').slice(0, getMaxLength()))
+    }
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
       buscarCliente()
+    }
+  }
+
+  const handleAbrirModalCrear = () => {
+    setNuevoCliente({
+      tipoDoc: tipoDocBusqueda,
+      numeroDoc: busquedaDni,
+      nombre: '',
+      telefono: '',
+      razonSocial: '',
+      direccion: '',
+      email: ''
+    })
+    setMostrarModalCrear(true)
+  }
+
+  const handleCrearCliente = async () => {
+    if (!nuevoCliente.nombre.trim() || !nuevoCliente.numeroDoc.trim()) {
+      setMensaje('⚠️ Nombre y documento son obligatorios')
+      setTimeout(() => setMensaje(''), 3000)
+      return
+    }
+
+    // Validar formato según tipo de documento
+    const numeroDoc = nuevoCliente.numeroDoc.trim()
+
+    if (nuevoCliente.tipoDoc === 'DNI') {
+      if (!/^\d{8}$/.test(numeroDoc)) {
+        setMensaje('⚠️ El DNI debe tener exactamente 8 dígitos')
+        setTimeout(() => setMensaje(''), 3000)
+        return
+      }
+    } else if (nuevoCliente.tipoDoc === 'RUC') {
+      if (!/^\d{11}$/.test(numeroDoc)) {
+        setMensaje('⚠️ El RUC debe tener exactamente 11 dígitos')
+        setTimeout(() => setMensaje(''), 3000)
+        return
+      }
+    } else if (nuevoCliente.tipoDoc === 'CE') {
+      if (!/^\d{9}$/.test(numeroDoc)) {
+        setMensaje('⚠️ El CE debe tener exactamente 9 dígitos')
+        setTimeout(() => setMensaje(''), 3000)
+        return
+      }
+    } else if (nuevoCliente.tipoDoc === 'PASAPORTE') {
+      if (!/^[A-Za-z0-9]{7,12}$/.test(numeroDoc)) {
+        setMensaje('⚠️ El Pasaporte debe tener entre 7 y 12 caracteres alfanuméricos')
+        setTimeout(() => setMensaje(''), 3000)
+        return
+      }
+    }
+
+    try {
+      const response = await fetch('/api/clientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nuevoCliente)
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Llenar los datos del cliente creado
+        onClienteSeleccionado(data.cliente)
+        onCambioNombre(data.cliente.nombre)
+        onCambioDni(data.cliente.numeroDoc)
+        onCambioCelular(data.cliente.telefono || '')
+        if (onCambioTipoDoc) {
+          onCambioTipoDoc(data.cliente.tipoDoc)
+        }
+
+        setClienteEncontrado(true)
+        setMensaje('✅ Cliente creado y seleccionado correctamente')
+        setMostrarModalCrear(false)
+        setBusquedaDni(data.cliente.numeroDoc)
+        setTipoDocBusqueda(data.cliente.tipoDoc)
+
+        setTimeout(() => setMensaje(''), 3000)
+      } else {
+        setMensaje('❌ Error: ' + (data.error || 'Error al crear cliente'))
+        setTimeout(() => setMensaje(''), 3000)
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      setMensaje('❌ Error al crear cliente')
+      setTimeout(() => setMensaje(''), 3000)
     }
   }
 
@@ -134,25 +304,53 @@ export default function BuscadorCliente({
             color: '#1e293b',
             margin: 0
           }}>
-            Buscar Cliente por DNI
+            Buscar Cliente
           </label>
         </div>
 
         <div style={{
-          display: 'flex',
+          display: 'grid',
+          gridTemplateColumns: '180px 1fr auto',
           gap: '0.75rem',
-          flexWrap: 'wrap',
+          marginBottom: '0.5rem',
           alignItems: 'stretch'
         }}>
-          <div style={{ flex: '1', minWidth: '250px' }}>
+          <div>
+            <select
+              value={tipoDocBusqueda}
+              onChange={(e) => {
+                setTipoDocBusqueda(e.target.value)
+                setBusquedaDni('')
+              }}
+              disabled={clienteEncontrado}
+              style={{
+                width: '100%',
+                height: '100%',
+                padding: '1rem',
+                border: '2px solid #3b82f6',
+                borderRadius: '8px',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                backgroundColor: clienteEncontrado ? '#ecfdf5' : 'white',
+                cursor: clienteEncontrado ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <option value="DNI">DNI</option>
+              <option value="RUC">RUC</option>
+              <option value="CE">CE</option>
+              <option value="PASAPORTE">Pasaporte</option>
+            </select>
+          </div>
+
+          <div>
             <input
               type="text"
               value={busquedaDni}
-              onChange={(e) => setBusquedaDni(e.target.value.replace(/\D/g, '').slice(0, 8))}
+              onChange={(e) => handleChangeBusqueda(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ingrese DNI (8 dígitos)..."
+              placeholder={getPlaceholder()}
               disabled={clienteEncontrado}
-              maxLength={8}
+              maxLength={getMaxLength()}
               style={{
                 width: '100%',
                 padding: '1rem 1.25rem',
@@ -191,25 +389,37 @@ export default function BuscadorCliente({
             <button
               type="button"
               onClick={buscarCliente}
-              disabled={buscando || busquedaDni.length < 8}
+              disabled={buscando || !busquedaDni.trim()}
               style={{
                 padding: '1rem 2rem',
-                backgroundColor: buscando || busquedaDni.length < 8 ? '#94a3b8' : '#3b82f6',
+                backgroundColor: buscando || !busquedaDni.trim() ? '#94a3b8' : '#3b82f6',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
-                cursor: buscando || busquedaDni.length < 8 ? 'not-allowed' : 'pointer',
+                cursor: buscando || !busquedaDni.trim() ? 'not-allowed' : 'pointer',
                 fontSize: '0.95rem',
                 fontWeight: '700',
                 whiteSpace: 'nowrap',
-                boxShadow: buscando || busquedaDni.length < 8 ? 'none' : '0 4px 6px rgba(59, 130, 246, 0.3)',
+                boxShadow: buscando || !busquedaDni.trim() ? 'none' : '0 4px 6px rgba(59, 130, 246, 0.3)',
                 transition: 'all 0.2s',
-                opacity: buscando || busquedaDni.length < 8 ? 0.6 : 1
+                opacity: buscando || !busquedaDni.trim() ? 0.6 : 1
               }}
             >
               {buscando ? '⏳ Buscando...' : '🔍 Buscar'}
             </button>
           )}
+        </div>
+
+        <div style={{
+          fontSize: '0.75rem',
+          color: '#6b7280',
+          marginTop: '0.5rem',
+          paddingLeft: '185px'
+        }}>
+          {tipoDocBusqueda === 'DNI' && 'DNI: 8 dígitos numéricos'}
+          {tipoDocBusqueda === 'RUC' && 'RUC: 11 dígitos numéricos'}
+          {tipoDocBusqueda === 'CE' && 'CE: 9 dígitos numéricos'}
+          {tipoDocBusqueda === 'PASAPORTE' && 'Pasaporte: 7-12 caracteres alfanuméricos'}
         </div>
 
         {/* Mensaje de estado */}
@@ -232,132 +442,386 @@ export default function BuscadorCliente({
             {mensaje}
           </div>
         )}
+
+        {/* Información del cliente encontrado */}
+        {clienteEncontrado && (
+          <div style={{
+            marginTop: '1rem',
+            padding: '1.25rem',
+            backgroundColor: '#ecfdf5',
+            borderRadius: '8px',
+            border: '2px solid #10b981',
+            boxShadow: '0 0 0 4px rgba(16, 185, 129, 0.1)'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '0.75rem'
+            }}>
+              <span style={{ fontSize: '1.25rem' }}>✅</span>
+              <span style={{
+                fontSize: '1rem',
+                fontWeight: '700',
+                color: '#065f46'
+              }}>
+                Cliente Seleccionado
+              </span>
+            </div>
+            <div style={{
+              fontSize: '1.1rem',
+              fontWeight: '600',
+              color: '#1f2937',
+              marginBottom: '0.5rem'
+            }}>
+              {clienteNombre}
+            </div>
+            <div style={{
+              fontSize: '0.9rem',
+              color: '#6b7280',
+              display: 'flex',
+              gap: '0.5rem',
+              flexWrap: 'wrap'
+            }}>
+              <span>
+                <strong>{tipoDoc || tipoDocBusqueda}:</strong> {clienteDni}
+              </span>
+              {clienteCelular && (
+                <>
+                  <span>•</span>
+                  <span>
+                    <strong>Celular:</strong> {clienteCelular}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Botón Crear Cliente - Solo mostrar si no hay cliente encontrado */}
+        {!clienteEncontrado && (
+          <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+            <button
+              type="button"
+              onClick={handleAbrirModalCrear}
+              style={{
+                padding: '0.875rem 1.5rem',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.95rem',
+                fontWeight: '700',
+                boxShadow: '0 4px 6px rgba(16, 185, 129, 0.3)',
+                transition: 'all 0.2s'
+              }}
+            >
+              ➕ Crear Nuevo Cliente
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Datos del cliente */}
-      <div>
+      {/* Modal Crear Cliente */}
+      {mostrarModalCrear && (
         <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
           display: 'flex',
           alignItems: 'center',
-          gap: '0.5rem',
-          marginBottom: '1rem',
-          paddingBottom: '0.75rem',
-          borderBottom: '2px solid #cbd5e1'
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
         }}>
-          <span style={{ fontSize: '1.5rem' }}>👤</span>
-          <h3 style={{
-            fontWeight: '700',
-            fontSize: '1.1rem',
-            color: '#1e293b',
-            margin: 0
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)'
           }}>
-            Datos del Cliente
-          </h3>
-        </div>
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid #e5e7eb'
+            }}>
+              <h2 style={{
+                fontSize: '1.5rem',
+                fontWeight: '700',
+                color: '#1f2937',
+                margin: 0
+              }}>
+                ➕ Crear Nuevo Cliente
+              </h2>
+            </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-        gap: '1.25rem',
-        padding: '1.5rem',
-        backgroundColor: clienteEncontrado ? '#ecfdf5' : 'white',
-        borderRadius: '10px',
-        border: clienteEncontrado ? '2px solid #10b981' : '2px solid #e2e8f0',
-        boxShadow: clienteEncontrado ? '0 0 0 4px rgba(16, 185, 129, 0.1)' : '0 1px 3px rgba(0,0,0,0.05)'
-      }}>
-        <div>
-          <label style={{
-            display: 'block',
-            marginBottom: '0.6rem',
-            fontWeight: '600',
-            fontSize: '0.9rem',
-            color: '#475569'
-          }}>
-            Nombre Completo *
-          </label>
-          <input
-            type="text"
-            value={clienteNombre}
-            onChange={(e) => onCambioNombre(e.target.value)}
-            required
-            disabled={clienteEncontrado}
-            placeholder="Nombre completo del cliente"
-            style={{
-              width: '100%',
-              padding: '0.9rem 1rem',
-              border: '2px solid #cbd5e1',
-              borderRadius: '8px',
-              fontSize: '0.95rem',
-              backgroundColor: clienteEncontrado ? '#d1fae5' : 'white',
-              fontWeight: '500',
-              transition: 'all 0.2s'
-            }}
-          />
-        </div>
+            <div style={{ padding: '1.5rem' }}>
+              {/* Tipo y Número de Documento */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '180px 1fr',
+                gap: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                    fontWeight: '600',
+                    fontSize: '0.875rem'
+                  }}>
+                    Tipo de Documento *
+                  </label>
+                  <select
+                    value={nuevoCliente.tipoDoc}
+                    onChange={(e) => setNuevoCliente({ ...nuevoCliente, tipoDoc: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    <option value="DNI">DNI</option>
+                    <option value="RUC">RUC</option>
+                    <option value="CE">CE</option>
+                    <option value="PASAPORTE">Pasaporte</option>
+                  </select>
+                </div>
 
-        <div>
-          <label style={{
-            display: 'block',
-            marginBottom: '0.6rem',
-            fontWeight: '600',
-            fontSize: '0.9rem',
-            color: '#475569'
-          }}>
-            DNI * <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: '400' }}>(8 dígitos)</span>
-          </label>
-          <input
-            type="text"
-            value={clienteDni}
-            onChange={(e) => validarDni(e.target.value)}
-            required
-            maxLength={8}
-            disabled={clienteEncontrado}
-            placeholder="12345678"
-            style={{
-              width: '100%',
-              padding: '0.9rem 1rem',
-              border: `2px solid ${clienteDni.length === 8 ? '#10b981' : '#cbd5e1'}`,
-              borderRadius: '8px',
-              fontSize: '0.95rem',
-              backgroundColor: clienteEncontrado ? '#d1fae5' : 'white',
-              fontWeight: '500',
-              transition: 'all 0.2s'
-            }}
-          />
-        </div>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                    fontWeight: '600',
+                    fontSize: '0.875rem'
+                  }}>
+                    Número de Documento *
+                  </label>
+                  <input
+                    type="text"
+                    value={nuevoCliente.numeroDoc}
+                    onChange={(e) => setNuevoCliente({ ...nuevoCliente, numeroDoc: e.target.value })}
+                    placeholder={
+                      nuevoCliente.tipoDoc === 'DNI' ? '8 dígitos' :
+                      nuevoCliente.tipoDoc === 'RUC' ? '11 dígitos' :
+                      nuevoCliente.tipoDoc === 'CE' ? '9 dígitos' :
+                      '7-12 caracteres alfanuméricos'
+                    }
+                    maxLength={
+                      nuevoCliente.tipoDoc === 'DNI' ? 8 :
+                      nuevoCliente.tipoDoc === 'RUC' ? 11 :
+                      nuevoCliente.tipoDoc === 'CE' ? 9 :
+                      12
+                    }
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem'
+                    }}
+                  />
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: '#6b7280',
+                    marginTop: '0.25rem'
+                  }}>
+                    {nuevoCliente.tipoDoc === 'DNI' && 'DNI: 8 dígitos numéricos'}
+                    {nuevoCliente.tipoDoc === 'RUC' && 'RUC: 11 dígitos numéricos'}
+                    {nuevoCliente.tipoDoc === 'CE' && 'CE: 9 dígitos numéricos'}
+                    {nuevoCliente.tipoDoc === 'PASAPORTE' && 'Pasaporte: 7-12 caracteres alfanuméricos'}
+                  </div>
+                </div>
+              </div>
 
-        <div>
-          <label style={{
-            display: 'block',
-            marginBottom: '0.6rem',
-            fontWeight: '600',
-            fontSize: '0.9rem',
-            color: '#475569'
-          }}>
-            Celular * <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: '400' }}>(9 dígitos)</span>
-          </label>
-          <input
-            type="text"
-            value={clienteCelular}
-            onChange={(e) => validarCelular(e.target.value)}
-            required
-            maxLength={9}
-            disabled={clienteEncontrado}
-            placeholder="987654321"
-            style={{
-              width: '100%',
-              padding: '0.9rem 1rem',
-              border: `2px solid ${clienteCelular.length === 9 ? '#10b981' : '#cbd5e1'}`,
-              borderRadius: '8px',
-              fontSize: '0.95rem',
-              backgroundColor: clienteEncontrado ? '#d1fae5' : 'white',
-              fontWeight: '500',
-              transition: 'all 0.2s'
-            }}
-          />
+              {/* Nombre */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '0.875rem'
+                }}>
+                  Nombre Completo *
+                </label>
+                <input
+                  type="text"
+                  value={nuevoCliente.nombre}
+                  onChange={(e) => setNuevoCliente({ ...nuevoCliente, nombre: e.target.value })}
+                  placeholder="Ej: Juan Pérez García"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+
+              {/* Razón Social - Solo para RUC */}
+              {nuevoCliente.tipoDoc === 'RUC' && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                    fontWeight: '600',
+                    fontSize: '0.875rem'
+                  }}>
+                    Razón Social
+                  </label>
+                  <input
+                    type="text"
+                    value={nuevoCliente.razonSocial}
+                    onChange={(e) => setNuevoCliente({ ...nuevoCliente, razonSocial: e.target.value })}
+                    placeholder="Ej: Empresa SAC"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem'
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Teléfono y Email */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                    fontWeight: '600',
+                    fontSize: '0.875rem'
+                  }}>
+                    Teléfono
+                  </label>
+                  <input
+                    type="text"
+                    value={nuevoCliente.telefono}
+                    onChange={(e) => setNuevoCliente({ ...nuevoCliente, telefono: e.target.value })}
+                    placeholder="Ej: 987654321"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                    fontWeight: '600',
+                    fontSize: '0.875rem'
+                  }}>
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={nuevoCliente.email}
+                    onChange={(e) => setNuevoCliente({ ...nuevoCliente, email: e.target.value })}
+                    placeholder="Ej: cliente@email.com"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Dirección */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '0.5rem',
+                  fontWeight: '600',
+                  fontSize: '0.875rem'
+                }}>
+                  Dirección
+                </label>
+                <textarea
+                  value={nuevoCliente.direccion}
+                  onChange={(e) => setNuevoCliente({ ...nuevoCliente, direccion: e.target.value })}
+                  placeholder="Ej: Av. Principal 123, Lima"
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{
+              padding: '1rem 1.5rem',
+              borderTop: '1px solid #e5e7eb',
+              display: 'flex',
+              gap: '0.75rem',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                type="button"
+                onClick={() => setMostrarModalCrear(false)}
+                style={{
+                  padding: '0.625rem 1.25rem',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '600'
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleCrearCliente}
+                style={{
+                  padding: '0.625rem 1.25rem',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '600'
+                }}
+              >
+                ✅ Crear Cliente
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-      </div>
+      )}
     </div>
   )
 }

@@ -265,45 +265,44 @@ export async function PUT(
 
     // ✅ Actualizar técnico si se proporciona
     if (tecnicoId) {
-      dataToUpdate.usuario = {
-        connect: { id: tecnicoId }
-      }
+      dataToUpdate.usuarioId = tecnicoId
     }
 
-    // Actualizar cliente si cambió
-    if (clienteDni !== servicioExistente.clienteDni) {
-      const clienteExistente = await prisma.cliente.findFirst({
-        where: { numeroDoc: clienteDni }
-      })
+    // ✅ Actualizar cliente si cambió - OPTIMIZADO
+    if (clienteDni !== servicioExistente.clienteDni && clienteDni) {
+      try {
+        const clienteExistente = await prisma.cliente.findFirst({
+          where: { numeroDoc: clienteDni }
+        })
 
-      if (clienteExistente) {
-        await prisma.cliente.update({
-          where: { id: clienteExistente.id },
-          data: {
-            nombre: clienteNombre,
-            telefono: clienteCelular
-          }
-        })
-        
-        dataToUpdate.cliente = {
-          connect: { id: clienteExistente.id }
+        if (clienteExistente) {
+          // Actualizar cliente existente
+          await prisma.cliente.update({
+            where: { id: clienteExistente.id },
+            data: {
+              nombre: clienteNombre,
+              telefono: clienteCelular
+            }
+          })
+          dataToUpdate.clienteId = clienteExistente.id
+        } else {
+          // Crear nuevo cliente
+          const nuevoCliente = await prisma.cliente.create({
+            data: {
+              tipoDoc: 'DNI',
+              numeroDoc: clienteDni,
+              nombre: clienteNombre,
+              telefono: clienteCelular
+            }
+          })
+          dataToUpdate.clienteId = nuevoCliente.id
         }
-      } else {
-        const nuevoCliente = await prisma.cliente.create({
-          data: {
-            tipoDoc: 'DNI',
-            numeroDoc: clienteDni,
-            nombre: clienteNombre,
-            telefono: clienteCelular
-          }
-        })
-        
-        dataToUpdate.cliente = {
-          connect: { id: nuevoCliente.id }
-        }
+      } catch (clienteError) {
+        console.warn('⚠️ Error al actualizar cliente, continuando sin cambios:', clienteError)
       }
-    } else {
-      if (servicioExistente.clienteId) {
+    } else if (servicioExistente.clienteId) {
+      // Solo actualizar datos del cliente existente
+      try {
         await prisma.cliente.update({
           where: { id: servicioExistente.clienteId },
           data: {
@@ -311,23 +310,25 @@ export async function PUT(
             telefono: clienteCelular
           }
         })
+      } catch (clienteError) {
+        console.warn('⚠️ Error al actualizar cliente:', clienteError)
       }
     }
 
-    // Actualizar servicio
+    // Actualizar servicio - SIN incluir relaciones para acelerar
     const servicioActualizado = await prisma.servicioTecnico.update({
       where: { id },
       data: dataToUpdate,
-      include: {
-        cliente: true,
-        usuario: {
-          select: {
-            id: true,
-            nombre: true,
-            username: true
-          }
-        },
-        sede: true
+      select: {
+        id: true,
+        numeroServicio: true,
+        estado: true,
+        clienteNombre: true,
+        clienteDni: true,
+        clienteCelular: true,
+        tipoEquipo: true,
+        marcaModelo: true,
+        descripcionEquipo: true
       }
     })
 
@@ -340,9 +341,12 @@ export async function PUT(
     })
   } catch (error: any) {
     console.error('❌ Error al actualizar servicio:', error)
+    console.error('❌ Stack trace:', error.stack)
+    
     return NextResponse.json({
       success: false,
-      error: error.message || 'Error al actualizar servicio'
+      error: error.message || 'Error al actualizar servicio',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 })
   }
 }

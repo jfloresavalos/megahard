@@ -30,6 +30,31 @@ export default function NuevoClientePage() {
       return
     }
 
+    // Validar formato según tipo de documento
+    const numeroDoc = formData.numeroDoc.trim()
+
+    if (formData.tipoDoc === 'DNI') {
+      if (!/^\d{8}$/.test(numeroDoc)) {
+        alert('⚠️ El DNI debe tener exactamente 8 dígitos')
+        return
+      }
+    } else if (formData.tipoDoc === 'RUC') {
+      if (!/^\d{11}$/.test(numeroDoc)) {
+        alert('⚠️ El RUC debe tener exactamente 11 dígitos')
+        return
+      }
+    } else if (formData.tipoDoc === 'CE') {
+      if (!/^\d{9}$/.test(numeroDoc)) {
+        alert('⚠️ El CE debe tener exactamente 9 dígitos')
+        return
+      }
+    } else if (formData.tipoDoc === 'PASAPORTE') {
+      if (!/^[A-Za-z0-9]{7,12}$/.test(numeroDoc)) {
+        alert('⚠️ El Pasaporte debe tener entre 7 y 12 caracteres alfanuméricos')
+        return
+      }
+    }
+
     try {
       setLoading(true)
 
@@ -146,7 +171,18 @@ export default function NuevoClientePage() {
                 type="text"
                 value={formData.numeroDoc}
                 onChange={(e) => setFormData({ ...formData, numeroDoc: e.target.value })}
-                placeholder="Ej: 12345678"
+                placeholder={
+                  formData.tipoDoc === 'DNI' ? '8 dígitos' :
+                  formData.tipoDoc === 'RUC' ? '11 dígitos' :
+                  formData.tipoDoc === 'CE' ? '9 dígitos' :
+                  '7-12 caracteres alfanuméricos'
+                }
+                maxLength={
+                  formData.tipoDoc === 'DNI' ? 8 :
+                  formData.tipoDoc === 'RUC' ? 11 :
+                  formData.tipoDoc === 'CE' ? 9 :
+                  12
+                }
                 required
                 style={{
                   width: '100%',
@@ -156,6 +192,16 @@ export default function NuevoClientePage() {
                   fontSize: '0.875rem'
                 }}
               />
+              <div style={{
+                fontSize: '0.75rem',
+                color: '#6b7280',
+                marginTop: '0.25rem'
+              }}>
+                {formData.tipoDoc === 'DNI' && 'DNI: 8 dígitos numéricos'}
+                {formData.tipoDoc === 'RUC' && 'RUC: 11 dígitos numéricos'}
+                {formData.tipoDoc === 'CE' && 'CE: 9 dígitos numéricos'}
+                {formData.tipoDoc === 'PASAPORTE' && 'Pasaporte: 7-12 caracteres alfanuméricos'}
+              </div>
             </div>
           </div>
 

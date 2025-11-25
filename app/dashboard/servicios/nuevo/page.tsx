@@ -78,6 +78,7 @@ export default function NuevoServicioPage() {
   const [clienteSeleccionado, setClienteSeleccionado] = useState<any>(null)
   const [clienteNombre, setClienteNombre] = useState('')
   const [clienteDni, setClienteDni] = useState('')
+  const [clienteTipoDoc, setClienteTipoDoc] = useState('DNI')
   const [clienteCelular, setClienteCelular] = useState('')
 
   // Datos del servicio
@@ -364,9 +365,27 @@ export default function NuevoServicioPage() {
       return
     }
 
-    if (clienteDni.length !== 8) {
-      alert('El DNI debe tener 8 dígitos')
-      return
+    // Validar formato según tipo de documento
+    if (clienteTipoDoc === 'DNI') {
+      if (!/^\d{8}$/.test(clienteDni)) {
+        alert('El DNI debe tener exactamente 8 dígitos')
+        return
+      }
+    } else if (clienteTipoDoc === 'RUC') {
+      if (!/^\d{11}$/.test(clienteDni)) {
+        alert('El RUC debe tener exactamente 11 dígitos')
+        return
+      }
+    } else if (clienteTipoDoc === 'CE') {
+      if (!/^\d{9}$/.test(clienteDni)) {
+        alert('El CE debe tener exactamente 9 dígitos')
+        return
+      }
+    } else if (clienteTipoDoc === 'PASAPORTE') {
+      if (!/^[A-Za-z0-9]{7,12}$/.test(clienteDni)) {
+        alert('El Pasaporte debe tener entre 7 y 12 caracteres alfanuméricos')
+        return
+      }
     }
 
     if (clienteCelular.length !== 9) {
@@ -406,6 +425,7 @@ export default function NuevoServicioPage() {
         body: JSON.stringify({
           clienteNombre,
           clienteDni,
+          clienteTipoDoc,
           clienteCelular,
           tecnicoId,
           sedeId,
@@ -590,9 +610,11 @@ export default function NuevoServicioPage() {
             clienteNombre={clienteNombre}
             clienteDni={clienteDni}
             clienteCelular={clienteCelular}
+            tipoDoc={clienteTipoDoc}
             onCambioNombre={setClienteNombre}
             onCambioDni={setClienteDni}
             onCambioCelular={setClienteCelular}
+            onCambioTipoDoc={setClienteTipoDoc}
           />
         </div>
 
