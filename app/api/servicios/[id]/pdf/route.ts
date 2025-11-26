@@ -513,30 +513,45 @@ y += alturaProblemaBox + 3; // Mover 'y' hacia abajo + 3mm de margen
 
     y += 3;
 
-    // ==================== TOTALES ====================
+    // ==================== TOTALES Y RESUMEN DE PAGOS ====================
+
+    // Calcular montos
+    const totalServicio = Number(servicio.total || 0);
+    const pagado = Number(servicio.aCuenta || 0);
+    const saldo = Number(servicio.saldo || 0);
+
+    // Altura dinámica según si hay método de pago
+    const tieneMetodoPago = servicio.metodoPago && servicio.metodoPago.trim() !== '';
+    const alturaTotales = tieneMetodoPago ? 30 : 24;
 
     const anchoCajaTot = 65;
     const xTot = pageWidth - margin - anchoCajaTot;
 
     doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
-    doc.rect(xTot, y, anchoCajaTot, 24, 'F');
+    doc.rect(xTot, y, anchoCajaTot, alturaTotales, 'F');
     doc.setDrawColor(180, 180, 180);
-    doc.rect(xTot, y, anchoCajaTot, 24);
+    doc.rect(xTot, y, anchoCajaTot, alturaTotales);
 
     let yTot = y + 6;
 
+    // TOTAL
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(negro[0], negro[1], negro[2]);
     doc.text('TOTAL:', xTot + 3, yTot);
-    doc.text(`S/ ${Number(servicio.total || 0).toFixed(2)}`, xTot + anchoCajaTot - 3, yTot, { align: 'right' });
+    doc.text(`S/ ${totalServicio.toFixed(2)}`, xTot + anchoCajaTot - 3, yTot, { align: 'right' });
 
     yTot += 6;
 
+    // PAGADO (con método de pago si existe)
     doc.setFontSize(9);
     doc.setTextColor(grisMedio[0], grisMedio[1], grisMedio[2]);
-    doc.text('A Cuenta:', xTot + 3, yTot);
-    doc.text(`S/ ${Number(servicio.aCuenta || 0).toFixed(2)}`, xTot + anchoCajaTot - 3, yTot, { align: 'right' });
+    if (tieneMetodoPago) {
+      doc.text(`Pagado (${servicio.metodoPago}):`, xTot + 3, yTot);
+    } else {
+      doc.text('Pagado:', xTot + 3, yTot);
+    }
+    doc.text(`S/ ${pagado.toFixed(2)}`, xTot + anchoCajaTot - 3, yTot, { align: 'right' });
 
     yTot += 1;
     doc.setDrawColor(180, 180, 180);
@@ -544,13 +559,14 @@ y += alturaProblemaBox + 3; // Mover 'y' hacia abajo + 3mm de margen
 
     yTot += 5;
 
+    // SALDO
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(negro[0], negro[1], negro[2]);
     doc.text('SALDO:', xTot + 3, yTot);
-    doc.text(`S/ ${Number(servicio.saldo || 0).toFixed(2)}`, xTot + anchoCajaTot - 3, yTot, { align: 'right' });
+    doc.text(`S/ ${saldo.toFixed(2)}`, xTot + anchoCajaTot - 3, yTot, { align: 'right' });
 
-    y += 28;
+    y += alturaTotales + 4;
 
     // ==================== CUENTAS DE LA EMPRESA ====================
 
