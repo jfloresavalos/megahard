@@ -34,6 +34,7 @@ interface Sede {
 export default function ServiciosTecnicosPage() {
   const { data: session } = useSession()
   const router = useRouter()
+  const [isMobile, setIsMobile] = useState(false)
   const [servicios, setServicios] = useState<Servicio[]>([])
   const [sedes, setSedes] = useState<Sede[]>([])
   const [loading, setLoading] = useState(true)
@@ -58,6 +59,13 @@ export default function ServiciosTecnicosPage() {
   })
 
   const esAdmin = session?.user?.rol === 'admin'
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     if (esAdmin) {
@@ -218,141 +226,162 @@ export default function ServiciosTecnicosPage() {
       {/* Filtros */}
       <div style={{
         backgroundColor: 'white',
-        padding: '1.5rem',
+        padding: isMobile ? '1rem' : '1.5rem',
         borderRadius: '8px',
         marginBottom: '1.5rem',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
       }}>
         <div style={{
-          display: 'flex',
-          gap: '1rem',
-          flexWrap: 'wrap',
-          alignItems: 'center'
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(150px, auto))',
+          gap: isMobile ? '0.75rem' : '1rem',
+          alignItems: isMobile ? 'stretch' : 'center'
         }}>
           {/* Filtro de Sede (solo para admin) */}
           {esAdmin && (
-            <>
-              <label style={{ fontWeight: '600', fontSize: '0.95rem' }}>
-                Sede:
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <label style={{ fontWeight: '600', fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#6b7280' }}>
+                Sede
               </label>
               <select
                 value={filtroSede}
                 onChange={(e) => setFiltroSede(e.target.value)}
                 style={{
-                  padding: '0.5rem 1rem',
+                  padding: isMobile ? '0.5rem' : '0.5rem 1rem',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '0.95rem',
-                  minWidth: '180px'
+                  fontSize: isMobile ? '0.85rem' : '0.95rem',
+                  width: '100%'
                 }}
               >
-                <option value="TODAS">Todas las sedes</option>
+                <option value="TODAS">Todas</option>
                 {sedes.map(sede => (
                   <option key={sede.id} value={sede.id}>{sede.nombre}</option>
                 ))}
               </select>
-            </>
+            </div>
           )}
 
           {/* Filtro de Tipo */}
-          <label style={{ fontWeight: '600', fontSize: '0.95rem' }}>
-            Tipo:
-          </label>
-          <select
-            value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value)}
-            style={{
-              padding: '0.5rem 1rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              fontSize: '0.95rem',
-              minWidth: '160px'
-            }}
-          >
-            <option value="TODOS">Todos</option>
-            <option value="TALLER">🔧 Taller</option>
-            <option value="DOMICILIO">🏠 Domicilio</option>
-          </select>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <label style={{ fontWeight: '600', fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#6b7280' }}>
+              Tipo
+            </label>
+            <select
+              value={filtroTipo}
+              onChange={(e) => setFiltroTipo(e.target.value)}
+              style={{
+                padding: isMobile ? '0.5rem' : '0.5rem 1rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: isMobile ? '0.85rem' : '0.95rem',
+                width: '100%'
+              }}
+            >
+              <option value="TODOS">Todos</option>
+              <option value="TALLER">🔧 Taller</option>
+              <option value="DOMICILIO">🏠 Domicilio</option>
+            </select>
+          </div>
 
           {/* Filtro de Estado */}
-          <label style={{ fontWeight: '600', fontSize: '0.95rem' }}>
-            Estado:
-          </label>
-          <select
-            value={filtroEstado}
-            onChange={(e) => setFiltroEstado(e.target.value)}
-            style={{
-              padding: '0.5rem 1rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              fontSize: '0.95rem',
-              minWidth: '200px'
-            }}
-          >
-            <option value="TODOS">Todos</option>
-            <option value="RECEPCIONADO">Recepcionado</option>
-            <option value="EN_DOMICILIO">En Domicilio</option>
-            <option value="EN_REPARACION">En reparación</option>
-            <option value="REPARADO">Reparado</option>
-            <option value="ENTREGADO">Entregado</option>
-            <option value="CANCELADO">Cancelado</option>
-          </select>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <label style={{ fontWeight: '600', fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#6b7280' }}>
+              Estado
+            </label>
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              style={{
+                padding: isMobile ? '0.5rem' : '0.5rem 1rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: isMobile ? '0.85rem' : '0.95rem',
+                width: '100%'
+              }}
+            >
+              <option value="TODOS">Todos</option>
+              <option value="RECEPCIONADO">Recepcionado</option>
+              <option value="EN_DOMICILIO">En Domicilio</option>
+              <option value="EN_REPARACION">En reparación</option>
+              <option value="REPARADO">Reparado</option>
+              <option value="ENTREGADO">Entregado</option>
+              <option value="CANCELADO">Cancelado</option>
+            </select>
+          </div>
 
           {/* Filtros de Fecha */}
-          <label style={{ fontWeight: '600', fontSize: '0.95rem', marginLeft: '1rem' }}>
-            📅 Desde:
-          </label>
-          <input
-            type="date"
-            value={fechaDesde}
-            onChange={(e) => setFechaDesde(e.target.value)}
-            style={{
-              padding: '0.5rem 1rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              fontSize: '0.95rem'
-            }}
-          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <label style={{ fontWeight: '600', fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#6b7280' }}>
+              📅 Desde
+            </label>
+            <input
+              type="date"
+              value={fechaDesde}
+              onChange={(e) => setFechaDesde(e.target.value)}
+              style={{
+                padding: isMobile ? '0.5rem' : '0.5rem 1rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: isMobile ? '0.85rem' : '0.95rem',
+                width: '100%'
+              }}
+            />
+          </div>
 
-          <label style={{ fontWeight: '600', fontSize: '0.95rem' }}>
-            Hasta:
-          </label>
-          <input
-            type="date"
-            value={fechaHasta}
-            onChange={(e) => setFechaHasta(e.target.value)}
-            style={{
-              padding: '0.5rem 1rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              fontSize: '0.95rem'
-            }}
-          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <label style={{ fontWeight: '600', fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#6b7280' }}>
+              Hasta
+            </label>
+            <input
+              type="date"
+              value={fechaHasta}
+              onChange={(e) => setFechaHasta(e.target.value)}
+              style={{
+                padding: isMobile ? '0.5rem' : '0.5rem 1rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: isMobile ? '0.85rem' : '0.95rem',
+                width: '100%'
+              }}
+            />
+          </div>
 
           {/* Botón para ver todos */}
-          <button
-            onClick={() => {
-              setFechaDesde('')
-              setFechaHasta('')
-            }}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#6b7280',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: '600',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            Ver Todos
-          </button>
-
-          <div style={{ marginLeft: 'auto', fontSize: '0.95rem', color: '#6b7280' }}>
-            <strong>{servicios.length}</strong> servicio{servicios.length !== 1 ? 's' : ''}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', justifyContent: 'flex-end' }}>
+            {!isMobile && <label style={{ height: '1.25rem' }}>&nbsp;</label>}
+            <button
+              onClick={() => {
+                setFechaDesde('')
+                setFechaHasta('')
+              }}
+              style={{
+                padding: isMobile ? '0.5rem' : '0.5rem 1rem',
+                backgroundColor: '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: isMobile ? '0.85rem' : '0.875rem',
+                fontWeight: '600',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Ver Todos
+            </button>
           </div>
+        </div>
+
+        {/* Contador de resultados */}
+        <div style={{
+          marginTop: '1rem',
+          paddingTop: '1rem',
+          borderTop: '1px solid #e5e7eb',
+          fontSize: isMobile ? '0.85rem' : '0.95rem',
+          color: '#6b7280',
+          textAlign: 'center'
+        }}>
+          <strong>{servicios.length}</strong> servicio{servicios.length !== 1 ? 's' : ''} encontrado{servicios.length !== 1 ? 's' : ''}
         </div>
       </div>
 

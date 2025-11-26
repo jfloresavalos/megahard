@@ -53,6 +53,7 @@ export default function NuevoServicioPage() {
   const router = useRouter()
   const esAdmin = session?.user?.rol === 'admin'
 
+  const [isMobile, setIsMobile] = useState(false)
   const [loading, setLoading] = useState(false)
   const [sedes, setSedes] = useState<Sede[]>([])
   const [tecnicos, setTecnicos] = useState<Usuario[]>([])
@@ -124,6 +125,13 @@ export default function NuevoServicioPage() {
   const [fotos, setFotos] = useState<File[]>([])
   const [previsualizaciones, setPrevisualizaciones] = useState<string[]>([])
   const [subiendoFotos, setSubiendoFotos] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     cargarDatos()
@@ -638,7 +646,7 @@ export default function NuevoServicioPage() {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
             gap: '1rem'
           }}>
             <div>
@@ -745,7 +753,7 @@ export default function NuevoServicioPage() {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '1rem',
             marginBottom: '1rem'
           }}>
@@ -1003,7 +1011,7 @@ export default function NuevoServicioPage() {
           {previsualizaciones.length > 0 && (
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+              gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fill, minmax(150px, 1fr))',
               gap: '1rem'
             }}>
               {previsualizaciones.map((preview, index) => (
@@ -1200,7 +1208,7 @@ export default function NuevoServicioPage() {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '1rem',
             marginBottom: '1.5rem'
           }}>
@@ -1390,7 +1398,7 @@ export default function NuevoServicioPage() {
 
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
               gap: '1rem'
             }}>
               <div>
@@ -1443,7 +1451,7 @@ export default function NuevoServicioPage() {
           {/* FECHA ESTIMADA Y GARANTÍA */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '1rem',
             marginBottom: '1.5rem'
           }}>
