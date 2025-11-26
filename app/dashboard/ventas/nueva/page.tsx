@@ -530,7 +530,12 @@ export default function NuevaVentaPage() {
 
           {!clienteEncontrado ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '90px 1fr' : 'auto 1fr auto',
+                gap: '0.5rem',
+                marginBottom: '0.5rem'
+              }}>
                 <select
                   value={tipoDocBusqueda}
                   onChange={(e) => setTipoDocBusqueda(e.target.value)}
@@ -538,7 +543,7 @@ export default function NuevaVentaPage() {
                     padding: '0.625rem 0.75rem',
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',
-                    fontSize: '0.875rem',
+                    fontSize: isMobile ? '0.8rem' : '0.875rem',
                     backgroundColor: 'white',
                     cursor: 'pointer'
                   }}
@@ -546,7 +551,7 @@ export default function NuevaVentaPage() {
                   <option value="DNI">DNI</option>
                   <option value="RUC">RUC</option>
                   <option value="CE">CE</option>
-                  <option value="PASAPORTE">Pasaporte</option>
+                  <option value="PASAPORTE">Pasap.</option>
                 </select>
                 <input
                   type="text"
@@ -555,30 +560,50 @@ export default function NuevaVentaPage() {
                   onChange={(e) => setBusquedaCliente(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleBuscarCliente()}
                   style={{
-                    flex: 1,
+                    width: '100%',
                     padding: '0.625rem 0.75rem',
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',
-                    fontSize: '0.875rem'
+                    fontSize: isMobile ? '0.8rem' : '0.875rem'
                   }}
                 />
+                {!isMobile && (
+                  <button
+                    onClick={handleBuscarCliente}
+                    style={{
+                      padding: '0.625rem 1rem',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Buscar
+                  </button>
+                )}
+              </div>
+              {isMobile && (
                 <button
                   onClick={handleBuscarCliente}
                   style={{
-                    padding: '0.625rem 1rem',
+                    width: '100%',
+                    padding: '0.625rem',
                     backgroundColor: '#3b82f6',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
-                    fontWeight: '600',
-                    whiteSpace: 'nowrap'
+                    fontWeight: '600'
                   }}
                 >
-                  Buscar
+                  Buscar Cliente
                 </button>
-              </div>
+              )}
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => setMostrarModalCliente(true)}

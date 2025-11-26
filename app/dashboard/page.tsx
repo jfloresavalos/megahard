@@ -326,7 +326,7 @@ export default function DashboardPage() {
         <>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(5, 1fr)',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(5, 1fr)',
             gap: '1rem',
             marginBottom: '2rem'
           }}>
@@ -435,12 +435,12 @@ export default function DashboardPage() {
           {/* Tabla de Servicios por Estado */}
           <div style={{
             backgroundColor: 'white',
-            padding: '1.5rem',
+            padding: isMobile ? '1rem' : '1.5rem',
             borderRadius: '8px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             marginBottom: '2rem'
           }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem', color: '#111827' }}>
+            <h2 style={{ fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: '600', marginBottom: '1rem', color: '#111827' }}>
               🔧 Servicios por Estado
             </h2>
 
@@ -450,20 +450,22 @@ export default function DashboardPage() {
               </p>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: isMobile ? '0.875rem' : '1rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
-                      <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', color: '#6b7280', fontWeight: '600' }}>
+                      <th style={{ padding: isMobile ? '0.5rem' : '0.75rem', textAlign: 'left', fontSize: isMobile ? '0.75rem' : '0.875rem', color: '#6b7280', fontWeight: '600' }}>
                         Estado
                       </th>
-                      <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280', fontWeight: '600' }}>
-                        Cantidad
+                      <th style={{ padding: isMobile ? '0.5rem' : '0.75rem', textAlign: 'center', fontSize: isMobile ? '0.75rem' : '0.875rem', color: '#6b7280', fontWeight: '600' }}>
+                        Cant.
                       </th>
-                      <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280', fontWeight: '600' }}>
-                        % Total
-                      </th>
-                      <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.875rem', color: '#6b7280', fontWeight: '600' }}>
-                        Más Antiguo
+                      {!isMobile && (
+                        <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280', fontWeight: '600' }}>
+                          % Total
+                        </th>
+                      )}
+                      <th style={{ padding: isMobile ? '0.5rem' : '0.75rem', textAlign: 'right', fontSize: isMobile ? '0.75rem' : '0.875rem', color: '#6b7280', fontWeight: '600' }}>
+                        {isMobile ? 'Antiguo' : 'Más Antiguo'}
                       </th>
                     </tr>
                   </thead>
@@ -474,39 +476,43 @@ export default function DashboardPage() {
 
                       return (
                         <tr key={index} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                          <td style={{ padding: '0.75rem' }}>
-                            <span style={{ fontSize: '0.95rem', fontWeight: '500' }}>
+                          <td style={{ padding: isMobile ? '0.5rem' : '0.75rem' }}>
+                            <span style={{ fontSize: isMobile ? '0.85rem' : '0.95rem', fontWeight: '500' }}>
                               {obtenerEmojiEstado(item.estado)} {obtenerNombreEstado(item.estado)}
                             </span>
                           </td>
-                          <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                          <td style={{ padding: isMobile ? '0.5rem' : '0.75rem', textAlign: 'center' }}>
                             <span style={{
-                              padding: '0.25rem 0.75rem',
+                              padding: isMobile ? '0.2rem 0.5rem' : '0.25rem 0.75rem',
                               backgroundColor: '#dbeafe',
                               color: '#1e40af',
                               borderRadius: '12px',
-                              fontSize: '0.875rem',
+                              fontSize: isMobile ? '0.75rem' : '0.875rem',
                               fontWeight: '600'
                             }}>
                               {item.cantidad}
                             </span>
                           </td>
-                          <td style={{ padding: '0.75rem', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
-                            {porcentaje}%
-                          </td>
-                          <td style={{ padding: '0.75rem', textAlign: 'right', color: '#6b7280', fontSize: '0.875rem' }}>
+                          {!isMobile && (
+                            <td style={{ padding: '0.75rem', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
+                              {porcentaje}%
+                            </td>
+                          )}
+                          <td style={{ padding: isMobile ? '0.5rem' : '0.75rem', textAlign: 'right', color: '#6b7280', fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
                             {formatearFecha(item.masAntiguo)}
                           </td>
                         </tr>
                       )
                     })}
-                    <tr style={{ backgroundColor: '#f9fafb', fontWeight: '600' }}>
-                      <td style={{ padding: '0.75rem' }}>TOTAL ACTIVOS</td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                    <tr style={{ backgroundColor: '#f9fafb', fontWeight: '600', fontSize: isMobile ? '0.75rem' : '1rem' }}>
+                      <td style={{ padding: isMobile ? '0.5rem' : '0.75rem' }}>TOTAL</td>
+                      <td style={{ padding: isMobile ? '0.5rem' : '0.75rem', textAlign: 'center' }}>
                         {metricas.serviciosPorEstado.reduce((sum, s) => sum + s.cantidad, 0)}
                       </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>100%</td>
-                      <td style={{ padding: '0.75rem' }}></td>
+                      {!isMobile && (
+                        <td style={{ padding: '0.75rem', textAlign: 'center' }}>100%</td>
+                      )}
+                      <td style={{ padding: isMobile ? '0.5rem' : '0.75rem' }}></td>
                     </tr>
                   </tbody>
                 </table>
@@ -518,28 +524,32 @@ export default function DashboardPage() {
           {sedeSeleccionada === 'todas' && metricas.comparativaSedes.length > 0 && (
             <div style={{
               backgroundColor: 'white',
-              padding: '1.5rem',
+              padding: isMobile ? '1rem' : '1.5rem',
               borderRadius: '8px',
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
             }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem', color: '#111827' }}>
+              <h2 style={{ fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: '600', marginBottom: '1rem', color: '#111827' }}>
                 📊 Comparativa por Sede
               </h2>
 
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: isMobile ? '0.875rem' : '1rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
-                      <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem', color: '#6b7280', fontWeight: '600' }}>
+                      <th style={{ padding: isMobile ? '0.5rem' : '0.75rem', textAlign: 'left', fontSize: isMobile ? '0.75rem' : '0.875rem', color: '#6b7280', fontWeight: '600' }}>
                         Sede
                       </th>
-                      <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280', fontWeight: '600' }}>
-                        Ventas
-                      </th>
-                      <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280', fontWeight: '600' }}>
-                        Servicios
-                      </th>
-                      <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.875rem', color: '#6b7280', fontWeight: '600' }}>
+                      {!isMobile && (
+                        <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280', fontWeight: '600' }}>
+                          Ventas
+                        </th>
+                      )}
+                      {!isMobile && (
+                        <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280', fontWeight: '600' }}>
+                          Servicios
+                        </th>
+                      )}
+                      <th style={{ padding: isMobile ? '0.5rem' : '0.75rem', textAlign: 'right', fontSize: isMobile ? '0.75rem' : '0.875rem', color: '#6b7280', fontWeight: '600' }}>
                         Ingresos
                       </th>
                     </tr>
@@ -547,29 +557,42 @@ export default function DashboardPage() {
                   <tbody>
                     {metricas.comparativaSedes.map((sede, index) => (
                       <tr key={index} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                        <td style={{ padding: '0.75rem', fontWeight: '500' }}>
+                        <td style={{ padding: isMobile ? '0.5rem' : '0.75rem', fontWeight: '500', fontSize: isMobile ? '0.85rem' : '1rem' }}>
                           📍 {sede.sede}
+                          {isMobile && (
+                            <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                              V:{sede.ventas} S:{sede.servicios}
+                            </div>
+                          )}
                         </td>
-                        <td style={{ padding: '0.75rem', textAlign: 'center', color: '#10b981', fontWeight: '600' }}>
-                          {sede.ventas}
-                        </td>
-                        <td style={{ padding: '0.75rem', textAlign: 'center', color: '#3b82f6', fontWeight: '600' }}>
-                          {sede.servicios}
-                        </td>
-                        <td style={{ padding: '0.75rem', textAlign: 'right', color: '#059669', fontWeight: '600' }}>
+                        {!isMobile && (
+                          <td style={{ padding: '0.75rem', textAlign: 'center', color: '#10b981', fontWeight: '600' }}>
+                            {sede.ventas}
+                          </td>
+                        )}
+                        {!isMobile && (
+                          <td style={{ padding: '0.75rem', textAlign: 'center', color: '#3b82f6', fontWeight: '600' }}>
+                            {sede.servicios}
+                          </td>
+                        )}
+                        <td style={{ padding: isMobile ? '0.5rem' : '0.75rem', textAlign: 'right', color: '#059669', fontWeight: '600', fontSize: isMobile ? '0.85rem' : '1rem' }}>
                           S/ {sede.ingresos.toFixed(2)}
                         </td>
                       </tr>
                     ))}
-                    <tr style={{ backgroundColor: '#f9fafb', fontWeight: '700' }}>
-                      <td style={{ padding: '0.75rem' }}>TOTAL</td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center', color: '#10b981' }}>
-                        {metricas.comparativaSedes.reduce((sum, s) => sum + s.ventas, 0)}
-                      </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center', color: '#3b82f6' }}>
-                        {metricas.comparativaSedes.reduce((sum, s) => sum + s.servicios, 0)}
-                      </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'right', color: '#059669' }}>
+                    <tr style={{ backgroundColor: '#f9fafb', fontWeight: '700', fontSize: isMobile ? '0.75rem' : '1rem' }}>
+                      <td style={{ padding: isMobile ? '0.5rem' : '0.75rem' }}>TOTAL</td>
+                      {!isMobile && (
+                        <td style={{ padding: '0.75rem', textAlign: 'center', color: '#10b981' }}>
+                          {metricas.comparativaSedes.reduce((sum, s) => sum + s.ventas, 0)}
+                        </td>
+                      )}
+                      {!isMobile && (
+                        <td style={{ padding: '0.75rem', textAlign: 'center', color: '#3b82f6' }}>
+                          {metricas.comparativaSedes.reduce((sum, s) => sum + s.servicios, 0)}
+                        </td>
+                      )}
+                      <td style={{ padding: isMobile ? '0.5rem' : '0.75rem', textAlign: 'right', color: '#059669' }}>
                         S/ {metricas.comparativaSedes.reduce((sum, s) => sum + s.ingresos, 0).toFixed(2)}
                       </td>
                     </tr>
