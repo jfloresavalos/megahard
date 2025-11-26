@@ -520,13 +520,13 @@ export default function NuevoServicioPage() {
         {/* ✅ SELECTOR DE TIPO DE SERVICIO */}
         <div style={{
           backgroundColor: 'white',
-          padding: '1.5rem',
+          padding: isMobile ? '1rem' : '1.5rem',
           borderRadius: '8px',
           marginBottom: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
-            fontSize: '1.1rem',
+            fontSize: isMobile ? '1rem' : '1.1rem',
             fontWeight: '600',
             marginBottom: '0.75rem',
             color: '#374151'
@@ -535,25 +535,26 @@ export default function NuevoServicioPage() {
           </h2>
 
           <div style={{
-            display: 'flex',
-            gap: '0.75rem',
-            flexWrap: 'wrap'
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gap: '0.75rem'
           }}>
             <button
               type="button"
               onClick={() => setTipoServicioForm('TALLER')}
               style={{
-                padding: '0.75rem 1.25rem',
+                padding: isMobile ? '0.75rem 1rem' : '0.75rem 1.25rem',
                 backgroundColor: tipoServicioForm === 'TALLER' ? '#3b82f6' : 'white',
                 color: tipoServicioForm === 'TALLER' ? 'white' : '#374151',
                 border: `2px solid ${tipoServicioForm === 'TALLER' ? '#3b82f6' : '#d1d5db'}`,
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: '0.95rem',
+                fontSize: isMobile ? '0.875rem' : '0.95rem',
                 fontWeight: '600',
                 transition: 'all 0.2s',
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '0.5rem'
               }}
             >
@@ -565,17 +566,18 @@ export default function NuevoServicioPage() {
               type="button"
               onClick={() => setTipoServicioForm('DOMICILIO')}
               style={{
-                padding: '0.75rem 1.25rem',
+                padding: isMobile ? '0.75rem 1rem' : '0.75rem 1.25rem',
                 backgroundColor: tipoServicioForm === 'DOMICILIO' ? '#10b981' : 'white',
                 color: tipoServicioForm === 'DOMICILIO' ? 'white' : '#374151',
                 border: `2px solid ${tipoServicioForm === 'DOMICILIO' ? '#10b981' : '#d1d5db'}`,
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: '0.95rem',
+                fontSize: isMobile ? '0.875rem' : '0.95rem',
                 fontWeight: '600',
                 transition: 'all 0.2s',
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '0.5rem'
               }}
             >
@@ -598,15 +600,15 @@ export default function NuevoServicioPage() {
         {/* DATOS DEL CLIENTE CON BUSCADOR */}
         <div style={{
           backgroundColor: 'white',
-          padding: 'clamp(1rem, 3vw, 2rem)',
+          padding: isMobile ? '1rem' : '1.5rem',
           borderRadius: '8px',
           marginBottom: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
-            fontSize: '1.25rem',
+            fontSize: isMobile ? '1.1rem' : '1.25rem',
             fontWeight: '600',
-            marginBottom: '1.5rem',
+            marginBottom: isMobile ? '1rem' : '1.5rem',
             borderBottom: '2px solid #e5e7eb',
             paddingBottom: '0.5rem'
           }}>
@@ -629,15 +631,15 @@ export default function NuevoServicioPage() {
         {/* TÉCNICO Y SEDE */}
         <div style={{
           backgroundColor: 'white',
-          padding: 'clamp(1rem, 3vw, 2rem)',
+          padding: isMobile ? '1rem' : '1.5rem',
           borderRadius: '8px',
           marginBottom: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
-            fontSize: '1.25rem',
+            fontSize: isMobile ? '1.1rem' : '1.25rem',
             fontWeight: '600',
-            marginBottom: '1.5rem',
+            marginBottom: isMobile ? '1rem' : '1.5rem',
             borderBottom: '2px solid #e5e7eb',
             paddingBottom: '0.5rem'
           }}>
@@ -650,7 +652,7 @@ export default function NuevoServicioPage() {
             gap: '1rem'
           }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
                 Sede *
               </label>
               {esAdmin ? (
@@ -688,7 +690,7 @@ export default function NuevoServicioPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
                 Técnico Encargado *
                 {tipoServicioForm === 'DOMICILIO' && !esAdmin && (
                   <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 'normal', marginLeft: '0.5rem' }}>
@@ -736,15 +738,15 @@ export default function NuevoServicioPage() {
         {/* EQUIPO EN RECEPCIÓN */}
         <div style={{
           backgroundColor: 'white',
-          padding: 'clamp(1rem, 3vw, 2rem)',
+          padding: isMobile ? '1rem' : '1.5rem',
           borderRadius: '8px',
           marginBottom: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
-            fontSize: '1.25rem',
+            fontSize: isMobile ? '1.1rem' : '1.25rem',
             fontWeight: '600',
-            marginBottom: '1.5rem',
+            marginBottom: isMobile ? '1rem' : '1.5rem',
             borderBottom: '2px solid #e5e7eb',
             paddingBottom: '0.5rem'
           }}>
@@ -758,7 +760,7 @@ export default function NuevoServicioPage() {
             marginBottom: '1rem'
           }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
                 Tipo de Equipo *
               </label>
               <select
@@ -783,7 +785,7 @@ export default function NuevoServicioPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
                 Marca
               </label>
               <input
@@ -802,7 +804,7 @@ export default function NuevoServicioPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
                 Modelo/Detalles
               </label>
               <input
@@ -824,7 +826,7 @@ export default function NuevoServicioPage() {
           {/* ✅ CAMPO DE DIRECCIÓN (solo para servicios a domicilio) */}
           {tipoServicioForm === 'DOMICILIO' && (
             <div style={{ marginTop: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
                 📍 Dirección donde se realizará el servicio *
               </label>
               <textarea
@@ -963,15 +965,15 @@ export default function NuevoServicioPage() {
         {/* FOTOS DEL EQUIPO */}
         <div style={{
           backgroundColor: 'white',
-          padding: 'clamp(1rem, 3vw, 2rem)',
+          padding: isMobile ? '1rem' : '1.5rem',
           borderRadius: '8px',
           marginBottom: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
-            fontSize: '1.25rem',
+            fontSize: isMobile ? '1.1rem' : '1.25rem',
             fontWeight: '600',
-            marginBottom: '1.5rem',
+            marginBottom: isMobile ? '1rem' : '1.5rem',
             borderBottom: '2px solid #e5e7eb',
             paddingBottom: '0.5rem'
           }}>
@@ -1067,7 +1069,7 @@ export default function NuevoServicioPage() {
         {/* PROBLEMAS ENCONTRADOS */}
         <div style={{
           backgroundColor: 'white',
-          padding: 'clamp(1rem, 3vw, 2rem)',
+          padding: isMobile ? '1rem' : '1.5rem',
           borderRadius: '8px',
           marginBottom: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
@@ -1191,15 +1193,15 @@ export default function NuevoServicioPage() {
         {/* COSTOS Y SERVICIOS */}
         <div style={{
           backgroundColor: 'white',
-          padding: 'clamp(1rem, 3vw, 2rem)',
+          padding: isMobile ? '1rem' : '1.5rem',
           borderRadius: '8px',
           marginBottom: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
-            fontSize: '1.25rem',
+            fontSize: isMobile ? '1.1rem' : '1.25rem',
             fontWeight: '600',
-            marginBottom: '1.5rem',
+            marginBottom: isMobile ? '1rem' : '1.5rem',
             borderBottom: '2px solid #e5e7eb',
             paddingBottom: '0.5rem'
           }}>
@@ -1213,7 +1215,7 @@ export default function NuevoServicioPage() {
             marginBottom: '1.5rem'
           }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
                 Costo del Servicio *
               </label>
               <input
@@ -1234,7 +1236,7 @@ export default function NuevoServicioPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
                 Garantía (días)
               </label>
               <input
@@ -1364,15 +1366,15 @@ export default function NuevoServicioPage() {
         {/* MÉTODO DE PAGO Y TOTALES */}
         <div style={{
           backgroundColor: 'white',
-          padding: 'clamp(1rem, 3vw, 2rem)',
+          padding: isMobile ? '1rem' : '1.5rem',
           borderRadius: '8px',
           marginBottom: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
-            fontSize: '1.25rem',
+            fontSize: isMobile ? '1.1rem' : '1.25rem',
             fontWeight: '600',
-            marginBottom: '1.5rem',
+            marginBottom: isMobile ? '1rem' : '1.5rem',
             borderBottom: '2px solid #e5e7eb',
             paddingBottom: '0.5rem'
           }}>
@@ -1402,7 +1404,7 @@ export default function NuevoServicioPage() {
               gap: '1rem'
             }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
                   Método de Pago del Adelanto
                 </label>
                 <select
@@ -1426,7 +1428,7 @@ export default function NuevoServicioPage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
                   Monto del Adelanto (A Cuenta)
                 </label>
                 <input
@@ -1456,7 +1458,7 @@ export default function NuevoServicioPage() {
             marginBottom: '1.5rem'
           }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
                 📅 Fecha Estimada de Entrega
               </label>
               <input
@@ -1474,7 +1476,7 @@ export default function NuevoServicioPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
                 🛡️ Garantía (días)
               </label>
               <input
@@ -1579,13 +1581,13 @@ export default function NuevoServicioPage() {
             onClick={() => router.push('/dashboard/servicios')}
             disabled={loading || subiendoFotos}
             style={{
-              padding: '1rem 2rem',
+              padding: isMobile ? '0.75rem 1.5rem' : '1rem 2rem',
               backgroundColor: '#6b7280',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
               cursor: loading || subiendoFotos ? 'not-allowed' : 'pointer',
-              fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+              fontSize: isMobile ? '0.875rem' : '1rem',
               whiteSpace: 'nowrap'
             }}
           >
@@ -1596,13 +1598,13 @@ export default function NuevoServicioPage() {
             type="submit"
             disabled={loading || subiendoFotos}
             style={{
-              padding: '1rem 3rem',
+              padding: isMobile ? '0.75rem 2rem' : '1rem 3rem',
               backgroundColor: loading || subiendoFotos ? '#9ca3af' : '#10b981',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
               cursor: loading || subiendoFotos ? 'not-allowed' : 'pointer',
-              fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+              fontSize: isMobile ? '0.875rem' : '1rem',
               fontWeight: '600',
               whiteSpace: 'nowrap'
             }}
