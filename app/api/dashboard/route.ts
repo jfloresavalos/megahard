@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     // 🔍 DEBUG: Log incoming parameters and session
     console.log('🔍 DEBUG Dashboard API:');
     console.log('  📥 sedeId recibido:', sedeId);
-    console.log('  👤 Usuario:', session.user?.email);
+    console.log('  👤 Usuario:', session.user?.username);
     console.log('  🏢 Rol:', session.user?.rol);
     console.log('  📍 SedeId del usuario:', session.user?.sedeId);
     console.log('  📅 Fechas:', { fechaDesde, fechaHasta });
