@@ -183,24 +183,47 @@ export default function EditarServicioPage() {
 
   // ✅ 1. Cargar catálogos primero
   useEffect(() => {
+    console.log('🔄 [EDITAR] Iniciando carga de datos (sedes, usuarios, catálogos)')
     cargarDatos()
   }, [])
 
   // ✅ 2. Cargar servicio cuando los catálogos estén listos
   useEffect(() => {
+    console.log('🔍 [EDITAR] Verificando condiciones para cargar servicio:', {
+      servicioId,
+      problemasDisponibles: problemasDisponibles.length,
+      serviciosDisponibles: serviciosDisponibles.length
+    })
+
     if (servicioId && problemasDisponibles.length > 0 && serviciosDisponibles.length > 0) {
+      console.log('✅ [EDITAR] Todas las condiciones cumplidas, cargando servicio...')
       cargarServicio()
+    } else {
+      console.warn('⚠️ [EDITAR] No se puede cargar servicio aún:', {
+        tieneServicioId: !!servicioId,
+        problemasLength: problemasDisponibles.length,
+        serviciosLength: serviciosDisponibles.length
+      })
     }
   }, [servicioId, problemasDisponibles, serviciosDisponibles])
 
   const cargarDatos = async () => {
     try {
+      console.log('🌐 [EDITAR] Haciendo fetch a APIs de catálogos...')
+
       const [resSedes, resUsuarios, resProblemas, resServicios] = await Promise.all([
         fetch('/api/sedes'),
         fetch('/api/usuarios'),
         fetch('/api/problemas-comunes'),
         fetch('/api/servicios-adicionales')
       ])
+
+      console.log('📡 [EDITAR] Respuestas recibidas:', {
+        sedes: resSedes.status,
+        usuarios: resUsuarios.status,
+        problemas: resProblemas.status,
+        servicios: resServicios.status
+      })
 
       const [dataSedes, dataUsuarios, dataProblemas, dataServicios] = await Promise.all([
         resSedes.json(),
@@ -209,32 +232,74 @@ export default function EditarServicioPage() {
         resServicios.json()
       ])
 
-      if (dataSedes.success) setSedes(dataSedes.sedes)
-      if (dataUsuarios.success) setTecnicos(dataUsuarios.usuarios.filter((u: any) => u.activo))
+      console.log('📦 [EDITAR] Datos parseados:', {
+        sedesSuccess: dataSedes.success,
+        sedesCount: dataSedes.sedes?.length || 0,
+        usuariosSuccess: dataUsuarios.success,
+        usuariosCount: dataUsuarios.usuarios?.length || 0,
+        problemasSuccess: dataProblemas.success,
+        problemasCount: dataProblemas.problemas?.length || 0,
+        serviciosSuccess: dataServicios.success,
+        serviciosCount: dataServicios.servicios?.length || 0
+      })
+
+      if (dataSedes.success) {
+        setSedes(dataSedes.sedes)
+        console.log('✅ [EDITAR] Sedes cargadas:', dataSedes.sedes.length)
+      } else {
+        console.error('❌ [EDITAR] Error al cargar sedes:', dataSedes.error)
+      }
+
+      if (dataUsuarios.success) {
+        const usuariosActivos = dataUsuarios.usuarios.filter((u: any) => u.activo)
+        setTecnicos(usuariosActivos)
+        console.log('✅ [EDITAR] Técnicos activos cargados:', usuariosActivos.length)
+      } else {
+        console.error('❌ [EDITAR] Error al cargar usuarios:', dataUsuarios.error)
+      }
+
       if (dataProblemas.success) {
-        console.log('📚 Catálogo de problemas cargado:', dataProblemas.problemas.length)
+        console.log('✅ [EDITAR] Catálogo de problemas cargado:', dataProblemas.problemas.length)
         setProblemasDisponibles(dataProblemas.problemas)
+      } else {
+        console.error('❌ [EDITAR] Error al cargar problemas:', dataProblemas.error)
+        setProblemasDisponibles([]) // ✅ Asegurar que sea array vacío
       }
+
       if (dataServicios.success) {
-        console.log('📚 Catálogo de servicios cargado:', dataServicios.servicios.length)
+        console.log('✅ [EDITAR] Catálogo de servicios cargado:', dataServicios.servicios.length)
         setServiciosDisponibles(dataServicios.servicios)
+      } else {
+        console.error('❌ [EDITAR] Error al cargar servicios adicionales:', dataServicios.error)
+        setServiciosDisponibles([]) // ✅ Asegurar que sea array vacío
       }
+
+      console.log('🏁 [EDITAR] Carga de catálogos completada')
     } catch (error) {
-      console.error('Error al cargar datos:', error)
+      console.error('❌ [EDITAR] Error al cargar datos:', error)
+      console.error('❌ [EDITAR] Stack trace:', error instanceof Error ? error.stack : 'No stack')
     }
   }
 
  const cargarServicio = async () => {
   try {
     setLoadingData(true)
-    console.log('🔍 Cargando servicio para editar:', servicioId)
+    console.log('🔍 [EDITAR] Cargando servicio para editar:', servicioId)
 
+    console.log('🌐 [EDITAR] Haciendo fetch a:', `/api/servicios/${servicioId}`)
     const response = await fetch(`/api/servicios/${servicioId}`)
+    console.log('📡 [EDITAR] Response status:', response.status)
+
     const data = await response.json()
+    console.log('📦 [EDITAR] Data recibida:', {
+      success: data.success,
+      hasServicio: !!data.servicio,
+      error: data.error
+    })
 
     if (data.success) {
       const s = data.servicio
-      console.log('📦 Servicio cargado:', s)
+      console.log('✅ [EDITAR] Servicio cargado correctamente:', s.numeroServicio)
 
       // Datos básicos
       setNumeroServicio(s.numeroServicio)
@@ -319,17 +384,21 @@ export default function EditarServicioPage() {
 
       // ✅✅✅ GUARDAR EL SERVICIO COMPLETO
       setServicioCompleto(s)
-      console.log('✅ Servicio completo guardado para mostrar info de reparación')
+      console.log('✅ [EDITAR] Servicio completo guardado para mostrar info de reparación')
+      console.log('✅ [EDITAR] Carga de servicio completada exitosamente')
 
     } else {
+      console.error('❌ [EDITAR] Error en response:', data.error)
       alert('❌ Error: ' + data.error)
       router.push('/dashboard/servicios')
     }
   } catch (error) {
-    console.error('Error al cargar servicio:', error)
-    alert('Error al cargar servicio')
+    console.error('❌ [EDITAR] Error al cargar servicio:', error)
+    console.error('❌ [EDITAR] Stack trace:', error instanceof Error ? error.stack : 'No stack')
+    alert('❌ Error al cargar servicio. Revisa la consola.')
     router.push('/dashboard/servicios')
   } finally {
+    console.log('🏁 [EDITAR] setLoadingData(false)')
     setLoadingData(false)
   }
 }
