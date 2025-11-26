@@ -7,10 +7,10 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params
-    
-    console.log('🔍 Buscando servicio con ID:', id)
 
-    const servicio = await prisma.servicioTecnico.findUnique({
+    console.log('🔍 [SERVICIO] Buscando servicio con ID:', id)
+
+    const servicio: any = await prisma.servicioTecnico.findUnique({
       where: {
         id: id
       },
@@ -24,8 +24,7 @@ export async function GET(
           }
         },
         sede: true,
-        tipoServicioRelacion: true, // ✅ Relación correcta
-        items: {  // ✅ AGREGAR ESTE INCLUDE
+        items: {
           include: {
             producto: {
               select: {
@@ -114,10 +113,10 @@ export async function GET(
       }
     }
 
-    console.log('✅ fotosEquipo parseado:', fotosEquipoParsed)
-    console.log('✅ fotosDespues parseado:', fotosDespuesParsed)
-    console.log('✅ serviciosAdicionales parseado:', serviciosAdicionalesParsed)
-    console.log('✅ items (repuestos):', servicio.items.length)
+    console.log('✅ [SERVICIO] fotosEquipo parseado:', fotosEquipoParsed?.length || 0)
+    console.log('✅ [SERVICIO] fotosDespues parseado:', fotosDespuesParsed?.length || 0)
+    console.log('✅ [SERVICIO] serviciosAdicionales parseado:', serviciosAdicionalesParsed?.length || 0)
+    console.log('✅ [SERVICIO] items (repuestos):', servicio.items?.length || 0)
 
     // Formatear respuesta
     const servicioFormateado = {
@@ -128,19 +127,23 @@ export async function GET(
       problemasReportados: problemasReportadosParsed,
       tecnico: servicio.usuario,
       tipoServicioTipo: servicio.tipoServicio, // ✅ String "TALLER" o "DOMICILIO"
-      tipoServicio: servicio.tipoServicioRelacion, // ✅ Relación al tipo de servicio
       items: servicio.items // ✅ YA INCLUIDO
     }
+
+    console.log('✅ [SERVICIO] Servicio encontrado y formateado correctamente')
 
     return NextResponse.json({
       success: true,
       servicio: servicioFormateado
     })
-  } catch (error) {
-    console.error('Error al obtener servicio:', error)
+  } catch (error: any) {
+    console.error('❌ [SERVICIO] Error al obtener servicio:', error)
+    console.error('❌ [SERVICIO] Stack trace:', error.stack)
+
     return NextResponse.json({
       success: false,
-      error: 'Error al obtener servicio'
+      error: 'Error al obtener servicio',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 })
   }
 }
@@ -154,8 +157,9 @@ export async function PUT(
   try {
     const { id } = await context.params
     const body = await request.json()
-    
-    console.log('📝 Actualizando servicio ID:', id)
+
+    console.log('📝 [SERVICIO] Actualizando servicio ID:', id)
+    console.log('📦 [SERVICIO] Datos recibidos:', JSON.stringify(Object.keys(body)))
 
     // Buscar el servicio existente
     const servicioExistente = await prisma.servicioTecnico.findUnique({
@@ -315,6 +319,8 @@ export async function PUT(
       }
     }
 
+    console.log('💾 [SERVICIO] Actualizando en BD...')
+
     // Actualizar servicio - SIN incluir relaciones para acelerar
     const servicioActualizado = await prisma.servicioTecnico.update({
       where: { id },
@@ -332,7 +338,7 @@ export async function PUT(
       }
     })
 
-    console.log('✅ Servicio actualizado:', servicioActualizado.numeroServicio)
+    console.log('✅ [SERVICIO] Servicio actualizado:', servicioActualizado.numeroServicio)
 
     return NextResponse.json({
       success: true,
@@ -340,13 +346,22 @@ export async function PUT(
       servicio: servicioActualizado
     })
   } catch (error: any) {
-    console.error('❌ Error al actualizar servicio:', error)
-    console.error('❌ Stack trace:', error.stack)
-    
+    console.error('❌ [SERVICIO] Error al actualizar servicio:', error)
+    console.error('❌ [SERVICIO] Stack trace:', error.stack)
+    console.error('❌ [SERVICIO] Error completo:', JSON.stringify({
+      message: error.message,
+      code: error.code,
+      meta: error.meta
+    }))
+
     return NextResponse.json({
       success: false,
       error: error.message || 'Error al actualizar servicio',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: process.env.NODE_ENV === 'development' ? {
+        stack: error.stack,
+        code: error.code,
+        meta: error.meta
+      } : undefined
     }, { status: 500 })
   }
 }

@@ -80,7 +80,14 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { clienteId, usuarioId, sedeId, items, metodoPago, tipoComprobante } = body
 
-    console.log('📦 Datos recibidos:', { clienteId, usuarioId, sedeId, items, metodoPago, tipoComprobante })
+    console.log('📦 [VENTA] Datos recibidos:', JSON.stringify({
+      clienteId,
+      usuarioId,
+      sedeId,
+      itemsCount: items?.length,
+      metodoPago,
+      tipoComprobante
+    }))
 
     // Validaciones básicas
     if (!usuarioId || !sedeId) {
@@ -129,8 +136,12 @@ export async function POST(request: Request) {
 
     // ✅ TRANSACCIÓN: Crear venta + Descontar stock
     const resultado = await prisma.$transaction(async (tx) => {
+      console.log('🔄 [VENTA] Iniciando transacción')
+
       // 1. Verificar que todos los productos existen y tienen stock suficiente
       for (const item of items) {
+        console.log(`🔍 [VENTA] Verificando producto: ${item.productoId}`)
+
         const producto = await tx.producto.findUnique({
           where: { id: item.productoId }
         })
@@ -138,6 +149,8 @@ export async function POST(request: Request) {
         if (!producto) {
           throw new Error(`Producto con ID ${item.productoId} no encontrado`)
         }
+
+        console.log(`✅ [VENTA] Producto encontrado: ${producto.nombre}`)
 
         // Verificar stock en la sede
         const productoSede = await tx.productoSede.findUnique({
@@ -152,6 +165,8 @@ export async function POST(request: Request) {
         if (!productoSede) {
           throw new Error(`El producto "${producto.nombre}" no está disponible en esta sede`)
         }
+
+        console.log(`📦 [VENTA] Stock disponible: ${productoSede.stock}, Solicitado: ${item.cantidad}`)
 
         if (productoSede.stock < item.cantidad) {
           throw new Error(
@@ -171,9 +186,11 @@ export async function POST(request: Request) {
         numeroVenta = `V-${String(ultimoNumero + 1).padStart(4, '0')}`
       }
 
-      console.log('📝 Número de venta:', numeroVenta)
+      console.log('📝 [VENTA] Número de venta generado:', numeroVenta)
 
       // 3. Crear venta con items Y PAGOS
+      console.log('💾 [VENTA] Creando venta en BD...')
+
       const venta = await tx.venta.create({
         data: {
           numeroVenta,
@@ -224,7 +241,11 @@ export async function POST(request: Request) {
         }
       })
 
+      console.log(`✅ [VENTA] Venta creada en BD: ${venta.id} - ${venta.numeroVenta}`)
+
       // 4. Descontar stock y crear movimientos
+      console.log('📉 [VENTA] Descontando stock...')
+
       for (const item of items) {
         const productoSede = await tx.productoSede.findUnique({
           where: {
@@ -238,6 +259,8 @@ export async function POST(request: Request) {
         const stockAntes = productoSede!.stock
         const stockDespues = stockAntes - item.cantidad
 
+        console.log(`📦 [VENTA] Producto ${item.productoId}: ${stockAntes} → ${stockDespues}`)
+
         // Actualizar stock
         await tx.productoSede.update({
           where: {
@@ -250,8 +273,6 @@ export async function POST(request: Request) {
             stock: stockDespues
           }
         })
-
-        console.log(`📉 Stock actualizado: ${stockAntes} → ${stockDespues}`)
 
         // Crear movimiento de stock
         await tx.movimientoStock.create({
@@ -267,10 +288,15 @@ export async function POST(request: Request) {
             anulado: false
           }
         })
+
+        console.log(`✅ [VENTA] Stock y movimiento registrados para producto ${item.productoId}`)
       }
 
-      console.log('✅ Venta creada y stock descontado:', venta.id, venta.numeroVenta)
+      console.log('✅ [VENTA] Transacción completada:', venta.id, venta.numeroVenta)
       return venta
+    }, {
+      maxWait: 10000, // 10 segundos máximo de espera
+      timeout: 30000  // 30 segundos de timeout total
     })
 
     return NextResponse.json({ 
@@ -280,10 +306,22 @@ export async function POST(request: Request) {
     })
 
   } catch (error: any) {
-    console.error('❌ Error al crear venta:', error)
-    return NextResponse.json({ 
+    console.error('❌ [VENTA] Error al crear venta:', error)
+    console.error('❌ [VENTA] Stack trace:', error.stack)
+    console.error('❌ [VENTA] Error completo:', JSON.stringify({
+      message: error.message,
+      code: error.code,
+      meta: error.meta
+    }))
+
+    return NextResponse.json({
       success: false,
-      error: error.message || 'Error al crear venta'
+      error: error.message || 'Error al crear venta',
+      details: process.env.NODE_ENV === 'development' ? {
+        stack: error.stack,
+        code: error.code,
+        meta: error.meta
+      } : undefined
     }, { status: 500 })
   }
 }

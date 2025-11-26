@@ -116,17 +116,29 @@ useEffect(() => {
 
   const cargarServicio = useCallback(async () => {
     try {
+      console.log('🔄 [DETALLE] Cargando servicio:', servicioId)
       setLoading(true)
+
+      console.log('🌐 [DETALLE] Haciendo fetch a:', `/api/servicios/${servicioId}`)
       const response = await fetch(`/api/servicios/${servicioId}`)
+
+      console.log('📡 [DETALLE] Response status:', response.status)
       const data = await response.json()
+      console.log('📦 [DETALLE] Data recibida:', {
+        success: data.success,
+        hasServicio: !!data.servicio,
+        error: data.error
+      })
 
       if (data.success) {
+        console.log('✅ [DETALLE] Servicio cargado correctamente')
         setServicio(data.servicio)
-        
+
         if (data.servicio.problemasReportados && data.servicio.problemasReportados.length > 0) {
+          console.log('🔍 [DETALLE] Cargando problemas comunes...')
           const responseProblemas = await fetch('/api/problemas-comunes')
           const dataProblemas = await responseProblemas.json()
-          
+
           if (dataProblemas.success) {
             const nombresMap: {[key: string]: string} = {}
             data.servicio.problemasReportados.forEach((id: string) => {
@@ -136,17 +148,21 @@ useEffect(() => {
               }
             })
             setProblemasNombres(nombresMap)
+            console.log('✅ [DETALLE] Problemas comunes cargados')
           }
         }
       } else {
+        console.error('❌ [DETALLE] Error en data:', data.error)
         alert('❌ ' + data.error)
         router.push('/dashboard/servicios')
       }
     } catch (error) {
-      console.error('❌ Error al cargar servicio:', error)
-      alert('❌ Error al cargar servicio')
+      console.error('❌ [DETALLE] Error al cargar servicio:', error)
+      console.error('❌ [DETALLE] Stack trace:', error instanceof Error ? error.stack : 'No stack')
+      alert('❌ Error al cargar servicio. Revisa la consola para más detalles.')
       router.push('/dashboard/servicios')
     } finally {
+      console.log('🏁 [DETALLE] setLoading(false)')
       setLoading(false)
     }
   }, [servicioId, router])
