@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 interface Cliente {
   id: string
@@ -33,6 +33,7 @@ export default function BuscadorCliente({
   tipoDoc = 'DNI',
   onCambioTipoDoc
 }: BuscadorClienteProps) {
+  const [isMobile, setIsMobile] = useState(false)
   const [busquedaDni, setBusquedaDni] = useState('')
   const [tipoDocBusqueda, setTipoDocBusqueda] = useState('DNI')
   const [buscando, setBuscando] = useState(false)
@@ -48,6 +49,15 @@ export default function BuscadorCliente({
     direccion: '',
     email: ''
   })
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const buscarCliente = async () => {
     if (!busquedaDni.trim()) {
@@ -282,25 +292,25 @@ export default function BuscadorCliente({
   return (
     <div style={{
       backgroundColor: '#f8fafc',
-      padding: '1.5rem',
-      borderRadius: '12px',
+      padding: isMobile ? '0.75rem' : '1.5rem',
+      borderRadius: isMobile ? '8px' : '12px',
       border: '2px solid #e2e8f0',
       boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
     }}>
       {/* Buscador con botón */}
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: isMobile ? '1rem' : '1.5rem' }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '0.5rem',
-          marginBottom: '1rem',
-          paddingBottom: '0.75rem',
+          marginBottom: isMobile ? '0.75rem' : '1rem',
+          paddingBottom: isMobile ? '0.5rem' : '0.75rem',
           borderBottom: '2px solid #cbd5e1'
         }}>
-          <span style={{ fontSize: '1.5rem' }}>🔍</span>
+          <span style={{ fontSize: isMobile ? '1.25rem' : '1.5rem' }}>🔍</span>
           <label style={{
             fontWeight: '700',
-            fontSize: '1.1rem',
+            fontSize: isMobile ? '0.95rem' : '1.1rem',
             color: '#1e293b',
             margin: 0
           }}>
@@ -310,8 +320,8 @@ export default function BuscadorCliente({
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '180px 1fr auto',
-          gap: '0.75rem',
+          gridTemplateColumns: isMobile ? '90px 1fr' : '180px 1fr auto',
+          gap: isMobile ? '0.5rem' : '0.75rem',
           marginBottom: '0.5rem',
           alignItems: 'stretch'
         }}>
@@ -326,10 +336,10 @@ export default function BuscadorCliente({
               style={{
                 width: '100%',
                 height: '100%',
-                padding: '1rem',
+                padding: isMobile ? '0.625rem' : '1rem',
                 border: '2px solid #3b82f6',
-                borderRadius: '8px',
-                fontSize: '0.95rem',
+                borderRadius: isMobile ? '6px' : '8px',
+                fontSize: isMobile ? '0.8rem' : '0.95rem',
                 fontWeight: '600',
                 backgroundColor: clienteEncontrado ? '#ecfdf5' : 'white',
                 cursor: clienteEncontrado ? 'not-allowed' : 'pointer'
@@ -338,25 +348,25 @@ export default function BuscadorCliente({
               <option value="DNI">DNI</option>
               <option value="RUC">RUC</option>
               <option value="CE">CE</option>
-              <option value="PASAPORTE">Pasaporte</option>
+              <option value="PASAPORTE">{isMobile ? 'Pasap.' : 'Pasaporte'}</option>
             </select>
           </div>
 
-          <div>
+          <div style={{ gridColumn: isMobile ? 'span 2' : 'auto' }}>
             <input
               type="text"
               value={busquedaDni}
               onChange={(e) => handleChangeBusqueda(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={getPlaceholder()}
+              placeholder={isMobile ? 'Nº documento...' : getPlaceholder()}
               disabled={clienteEncontrado}
               maxLength={getMaxLength()}
               style={{
                 width: '100%',
-                padding: '1rem 1.25rem',
+                padding: isMobile ? '0.625rem 0.75rem' : '1rem 1.25rem',
                 border: `2px solid ${clienteEncontrado ? '#10b981' : '#3b82f6'}`,
-                borderRadius: '8px',
-                fontSize: '1rem',
+                borderRadius: isMobile ? '6px' : '8px',
+                fontSize: isMobile ? '0.85rem' : '1rem',
                 fontWeight: '500',
                 backgroundColor: clienteEncontrado ? '#ecfdf5' : 'white',
                 boxShadow: clienteEncontrado ? '0 0 0 3px rgba(16, 185, 129, 0.1)' : '0 0 0 3px rgba(59, 130, 246, 0.1)',
@@ -365,7 +375,7 @@ export default function BuscadorCliente({
             />
           </div>
 
-          {clienteEncontrado ? (
+          {!isMobile && (clienteEncontrado ? (
             <button
               type="button"
               onClick={limpiarCliente}
@@ -407,14 +417,64 @@ export default function BuscadorCliente({
             >
               {buscando ? '⏳ Buscando...' : '🔍 Buscar'}
             </button>
-          )}
+          ))}
         </div>
 
+        {/* Botón móvil debajo */}
+        {isMobile && (
+          <div style={{ marginTop: '0.5rem' }}>
+            {clienteEncontrado ? (
+              <button
+                type="button"
+                onClick={limpiarCliente}
+                style={{
+                  width: '100%',
+                  padding: '0.625rem',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: '700',
+                  boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                🔄 Cambiar Cliente
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={buscarCliente}
+                disabled={buscando || !busquedaDni.trim()}
+                style={{
+                  width: '100%',
+                  padding: '0.625rem',
+                  backgroundColor: buscando || !busquedaDni.trim() ? '#94a3b8' : '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: buscando || !busquedaDni.trim() ? 'not-allowed' : 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: '700',
+                  boxShadow: buscando || !busquedaDni.trim() ? 'none' : '0 2px 4px rgba(59, 130, 246, 0.3)',
+                  transition: 'all 0.2s',
+                  opacity: buscando || !busquedaDni.trim() ? 0.6 : 1
+                }}
+              >
+                {buscando ? '⏳ Buscando...' : '🔍 Buscar Cliente'}
+              </button>
+            )}
+          </div>
+        )}
+
         <div style={{
-          fontSize: '0.75rem',
+          fontSize: isMobile ? '0.7rem' : '0.75rem',
           color: '#6b7280',
           marginTop: '0.5rem',
-          paddingLeft: '185px'
+          paddingLeft: isMobile ? '0' : '185px',
+          textAlign: isMobile ? 'center' : 'left'
         }}>
           {tipoDocBusqueda === 'DNI' && 'DNI: 8 dígitos numéricos'}
           {tipoDocBusqueda === 'RUC' && 'RUC: 11 dígitos numéricos'}
@@ -425,10 +485,10 @@ export default function BuscadorCliente({
         {/* Mensaje de estado */}
         {mensaje && (
           <div style={{
-            marginTop: '1rem',
-            padding: '1rem 1.25rem',
-            borderRadius: '8px',
-            fontSize: '0.95rem',
+            marginTop: isMobile ? '0.75rem' : '1rem',
+            padding: isMobile ? '0.75rem' : '1rem 1.25rem',
+            borderRadius: isMobile ? '6px' : '8px',
+            fontSize: isMobile ? '0.8rem' : '0.95rem',
             fontWeight: '600',
             textAlign: 'center',
             backgroundColor: mensaje.includes('✅') ? '#d1fae5' :
@@ -446,10 +506,10 @@ export default function BuscadorCliente({
         {/* Información del cliente encontrado */}
         {clienteEncontrado && (
           <div style={{
-            marginTop: '1rem',
-            padding: '1.25rem',
+            marginTop: isMobile ? '0.75rem' : '1rem',
+            padding: isMobile ? '0.75rem' : '1.25rem',
             backgroundColor: '#ecfdf5',
-            borderRadius: '8px',
+            borderRadius: isMobile ? '6px' : '8px',
             border: '2px solid #10b981',
             boxShadow: '0 0 0 4px rgba(16, 185, 129, 0.1)'
           }}>
@@ -457,11 +517,11 @@ export default function BuscadorCliente({
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              marginBottom: '0.75rem'
+              marginBottom: isMobile ? '0.5rem' : '0.75rem'
             }}>
-              <span style={{ fontSize: '1.25rem' }}>✅</span>
+              <span style={{ fontSize: isMobile ? '1rem' : '1.25rem' }}>✅</span>
               <span style={{
-                fontSize: '1rem',
+                fontSize: isMobile ? '0.85rem' : '1rem',
                 fontWeight: '700',
                 color: '#065f46'
               }}>
@@ -469,7 +529,7 @@ export default function BuscadorCliente({
               </span>
             </div>
             <div style={{
-              fontSize: '1.1rem',
+              fontSize: isMobile ? '0.95rem' : '1.1rem',
               fontWeight: '600',
               color: '#1f2937',
               marginBottom: '0.5rem'
@@ -477,7 +537,7 @@ export default function BuscadorCliente({
               {clienteNombre}
             </div>
             <div style={{
-              fontSize: '0.9rem',
+              fontSize: isMobile ? '0.8rem' : '0.9rem',
               color: '#6b7280',
               display: 'flex',
               gap: '0.5rem',
@@ -500,20 +560,21 @@ export default function BuscadorCliente({
 
         {/* Botón Crear Cliente - Solo mostrar si no hay cliente encontrado */}
         {!clienteEncontrado && (
-          <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+          <div style={{ marginTop: isMobile ? '0.75rem' : '1rem', textAlign: 'center' }}>
             <button
               type="button"
               onClick={handleAbrirModalCrear}
               style={{
-                padding: '0.875rem 1.5rem',
+                width: isMobile ? '100%' : 'auto',
+                padding: isMobile ? '0.625rem' : '0.875rem 1.5rem',
                 backgroundColor: '#10b981',
                 color: 'white',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: isMobile ? '6px' : '8px',
                 cursor: 'pointer',
-                fontSize: '0.95rem',
+                fontSize: isMobile ? '0.85rem' : '0.95rem',
                 fontWeight: '700',
-                boxShadow: '0 4px 6px rgba(16, 185, 129, 0.3)',
+                boxShadow: isMobile ? '0 2px 4px rgba(16, 185, 129, 0.3)' : '0 4px 6px rgba(16, 185, 129, 0.3)',
                 transition: 'all 0.2s'
               }}
             >

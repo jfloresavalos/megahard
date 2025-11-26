@@ -58,13 +58,22 @@ export async function GET(request: Request) {
       where.productoId = productoId;
     }
 
+    // ✅ Filtro de fecha con zona horaria de Perú (UTC-5)
     if (fechaDesde || fechaHasta) {
       where.fecha = {};
       if (fechaDesde) {
-        where.fecha.gte = new Date(fechaDesde + 'T00:00:00');
+        // Perú está en UTC-5, entonces 00:00:00 en Perú es 05:00:00 UTC
+        const fechaInicio = new Date(fechaDesde + 'T05:00:00.000Z');
+        where.fecha.gte = fechaInicio;
+        console.log('📅 Filtro desde:', fechaDesde, '→', fechaInicio.toISOString());
       }
       if (fechaHasta) {
-        where.fecha.lte = new Date(fechaHasta + 'T23:59:59');
+        // 23:59:59 en Perú es 04:59:59 del día siguiente en UTC
+        const fechaFin = new Date(fechaHasta + 'T05:00:00.000Z');
+        fechaFin.setDate(fechaFin.getDate() + 1);
+        fechaFin.setMilliseconds(-1);
+        where.fecha.lte = fechaFin;
+        console.log('📅 Filtro hasta:', fechaHasta, '→', fechaFin.toISOString());
       }
     }
 

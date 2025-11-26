@@ -31,6 +31,7 @@ interface Sede {
 
 export default function DashboardPage() {
   const { data: session } = useSession()
+  const esAdmin = session?.user?.rol === 'admin'
   const [isMobile, setIsMobile] = useState(false)
   const [loading, setLoading] = useState(true)
   const [metricas, setMetricas] = useState<MetricasDashboard | null>(null)
@@ -97,8 +98,23 @@ export default function DashboardPage() {
     cargarSedes()
   }, [])
 
+  // Establecer sede automáticamente para usuarios no admin
   useEffect(() => {
-    cargarMetricas()
+    if (session && !esAdmin && session.user?.sedeId) {
+      setSedeSeleccionada(session.user.sedeId)
+    }
+  }, [session, esAdmin])
+
+  useEffect(() => {
+    // Solo cargar métricas si:
+    // 1. Es admin (puede ver cualquier sede)
+    // 2. Es usuario y ya se estableció su sede (no debe ser 'todas')
+    const debeCargar = esAdmin || sedeSeleccionada !== 'todas'
+
+    if (debeCargar) {
+      cargarMetricas()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sedeSeleccionada, periodoSeleccionado, fechaDesde, fechaHasta])
 
   const cargarSedes = async () => {
@@ -228,27 +244,47 @@ export default function DashboardPage() {
         flexDirection: isMobile ? 'column' : 'row',
         alignItems: isMobile ? 'stretch' : 'center'
       }}>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem', display: 'block' }}>
-            Sede
-          </label>
-          <select
-            value={sedeSeleccionada}
-            onChange={(e) => setSedeSeleccionada(e.target.value)}
-            style={{
+        {esAdmin ? (
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem', display: 'block' }}>
+              Sede
+            </label>
+            <select
+              value={sedeSeleccionada}
+              onChange={(e) => setSedeSeleccionada(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.5rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '1rem'
+              }}
+            >
+              <option value="todas">📍 Todas las sedes</option>
+              {sedes.map(sede => (
+                <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem', display: 'block' }}>
+              Sede
+            </label>
+            <div style={{
               width: '100%',
               padding: '0.5rem',
-              border: '1px solid #d1d5db',
+              border: '2px solid #10b981',
               borderRadius: '6px',
-              fontSize: '1rem'
-            }}
-          >
-            <option value="todas">📍 Todas las sedes</option>
-            {sedes.map(sede => (
-              <option key={sede.id} value={sede.id}>{sede.nombre}</option>
-            ))}
-          </select>
-        </div>
+              fontSize: '1rem',
+              backgroundColor: '#ecfdf5',
+              color: '#065f46',
+              fontWeight: '600'
+            }}>
+              📍 {sedes.find(s => s.id === sedeSeleccionada)?.nombre || session?.user?.sedeName || 'Mi Sede'}
+            </div>
+          </div>
+        )}
 
         <div style={{ flex: 1 }}>
           <label style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem', display: 'block' }}>

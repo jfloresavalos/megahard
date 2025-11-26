@@ -15,6 +15,14 @@ export async function GET(request: Request) {
     const fechaDesde = searchParams.get('fechaDesde');
     const fechaHasta = searchParams.get('fechaHasta');
 
+    // 🔍 DEBUG: Log incoming parameters and session
+    console.log('🔍 DEBUG Dashboard API:');
+    console.log('  📥 sedeId recibido:', sedeId);
+    console.log('  👤 Usuario:', session.user?.email);
+    console.log('  🏢 Rol:', session.user?.rol);
+    console.log('  📍 SedeId del usuario:', session.user?.sedeId);
+    console.log('  📅 Fechas:', { fechaDesde, fechaHasta });
+
     // Construir filtros base (sin excluir estados aquí, lo haremos en cada query específico)
     const whereServicio: any = {};
 
@@ -26,17 +34,30 @@ export async function GET(request: Request) {
     if (sedeId && sedeId !== 'todas') {
       whereServicio.sedeId = sedeId;
       whereVenta.sedeId = sedeId;
+      console.log('  ✅ Filtro de sede aplicado:', sedeId);
+    } else {
+      console.log('  ⚠️  NO se aplicó filtro de sede (sedeId === "todas" o null)');
     }
 
-    // Filtrar por rango de fechas
+    console.log('  🔧 whereServicio:', JSON.stringify(whereServicio, null, 2));
+    console.log('  🔧 whereVenta:', JSON.stringify(whereVenta, null, 2));
+
+    // Filtrar por rango de fechas con zona horaria de Perú (UTC-5)
     if (fechaDesde && fechaHasta) {
+      // 00:00:00 en Perú = 05:00:00 UTC
+      const fechaInicio = new Date(fechaDesde + 'T05:00:00.000Z')
+      // 23:59:59 en Perú = 04:59:59 del día siguiente en UTC
+      const fechaFin = new Date(fechaHasta + 'T05:00:00.000Z')
+      fechaFin.setDate(fechaFin.getDate() + 1)
+      fechaFin.setMilliseconds(-1)
+
       whereServicio.createdAt = {
-        gte: new Date(fechaDesde + 'T00:00:00'),
-        lte: new Date(fechaHasta + 'T23:59:59')
+        gte: fechaInicio,
+        lte: fechaFin
       };
       whereVenta.fecha = {
-        gte: new Date(fechaDesde + 'T00:00:00'),
-        lte: new Date(fechaHasta + 'T23:59:59')
+        gte: fechaInicio,
+        lte: fechaFin
       };
     }
 
@@ -98,6 +119,14 @@ export async function GET(request: Request) {
         total: true
       }
     });
+
+    // 🔍 DEBUG: Log query results
+    console.log('  📊 RESULTADOS DE QUERIES:');
+    console.log('    🔧 Total Servicios:', totalServicios);
+    console.log('    ✅ Servicios Entregados:', serviciosEntregados);
+    console.log('    💰 Ingresos Servicios:', Number(serviciosData._sum.total) || 0);
+    console.log('    🛒 Total Ventas:', ventasData._count.id);
+    console.log('    💵 Ingresos Ventas:', Number(ventasData._sum.total) || 0);
 
     // 5. COMPARATIVA POR SEDE (solo si sedeId === 'todas')
     let comparativaSedes: Array<{ sede: string; servicios: number; ventas: number; ingresos: number | any }> = [];

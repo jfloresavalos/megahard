@@ -479,31 +479,31 @@ export default function NuevoServicioPage() {
   }
 
   return (
-    <div style={{ 
-      maxWidth: '1400px', 
+    <div style={{
+      maxWidth: '1400px',
       margin: '0 auto',
-      padding: '1rem'
+      padding: isMobile ? '0.5rem' : '1rem'
     }}>
       {/* Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '1.5rem',
+        marginBottom: isMobile ? '1rem' : '1.5rem',
         flexWrap: 'wrap',
-        gap: '1rem'
+        gap: isMobile ? '0.75rem' : '1rem'
       }}>
-        <h1 style={{ 
-          fontSize: 'clamp(1.5rem, 4vw, 2rem)', 
-          fontWeight: 'bold', 
-          margin: 0 
+        <h1 style={{
+          fontSize: isMobile ? '1.25rem' : 'clamp(1.5rem, 4vw, 2rem)',
+          fontWeight: 'bold',
+          margin: 0
         }}>
           🔧 Nuevo Servicio Técnico
         </h1>
         <button
           onClick={() => router.push('/dashboard/servicios')}
           style={{
-            padding: '0.75rem 1.5rem',
+            padding: isMobile ? '0.625rem 1rem' : '0.75rem 1.5rem',
             backgroundColor: '#6b7280',
             color: 'white',
             border: 'none',
@@ -520,15 +520,15 @@ export default function NuevoServicioPage() {
         {/* ✅ SELECTOR DE TIPO DE SERVICIO */}
         <div style={{
           backgroundColor: 'white',
-          padding: isMobile ? '1rem' : '1.5rem',
+          padding: isMobile ? '0.75rem' : '1.5rem',
           borderRadius: '8px',
-          marginBottom: '1.5rem',
+          marginBottom: isMobile ? '1rem' : '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
-            fontSize: isMobile ? '1rem' : '1.1rem',
+            fontSize: isMobile ? '0.95rem' : '1.1rem',
             fontWeight: '600',
-            marginBottom: '0.75rem',
+            marginBottom: isMobile ? '0.5rem' : '0.75rem',
             color: '#374151'
           }}>
             📋 Tipo de Servicio
@@ -543,13 +543,13 @@ export default function NuevoServicioPage() {
               type="button"
               onClick={() => setTipoServicioForm('TALLER')}
               style={{
-                padding: isMobile ? '0.75rem 1rem' : '0.75rem 1.25rem',
+                padding: isMobile ? '0.625rem 0.75rem' : '0.75rem 1.25rem',
                 backgroundColor: tipoServicioForm === 'TALLER' ? '#3b82f6' : 'white',
                 color: tipoServicioForm === 'TALLER' ? 'white' : '#374151',
                 border: `2px solid ${tipoServicioForm === 'TALLER' ? '#3b82f6' : '#d1d5db'}`,
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: isMobile ? '0.875rem' : '0.95rem',
+                fontSize: isMobile ? '0.8rem' : '0.95rem',
                 fontWeight: '600',
                 transition: 'all 0.2s',
                 display: 'flex',
@@ -558,7 +558,7 @@ export default function NuevoServicioPage() {
                 gap: '0.5rem'
               }}
             >
-              <span style={{ fontSize: '1.25rem' }}>🔧</span>
+              <span style={{ fontSize: isMobile ? '1rem' : '1.25rem' }}>🔧</span>
               <span>Servicio en Taller</span>
             </button>
 
@@ -566,13 +566,13 @@ export default function NuevoServicioPage() {
               type="button"
               onClick={() => setTipoServicioForm('DOMICILIO')}
               style={{
-                padding: isMobile ? '0.75rem 1rem' : '0.75rem 1.25rem',
+                padding: isMobile ? '0.625rem 0.75rem' : '0.75rem 1.25rem',
                 backgroundColor: tipoServicioForm === 'DOMICILIO' ? '#10b981' : 'white',
                 color: tipoServicioForm === 'DOMICILIO' ? 'white' : '#374151',
                 border: `2px solid ${tipoServicioForm === 'DOMICILIO' ? '#10b981' : '#d1d5db'}`,
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: isMobile ? '0.875rem' : '0.95rem',
+                fontSize: isMobile ? '0.8rem' : '0.95rem',
                 fontWeight: '600',
                 transition: 'all 0.2s',
                 display: 'flex',
@@ -581,12 +581,12 @@ export default function NuevoServicioPage() {
                 gap: '0.5rem'
               }}
             >
-              <span style={{ fontSize: '1.25rem' }}>🏠</span>
+              <span style={{ fontSize: isMobile ? '1rem' : '1.25rem' }}>🏠</span>
               <span>Servicio a Domicilio</span>
             </button>
           </div>
           <p style={{
-            fontSize: '0.875rem',
+            fontSize: isMobile ? '0.75rem' : '0.875rem',
             color: '#6b7280',
             marginTop: '0.5rem',
             marginBottom: 0
@@ -600,17 +600,17 @@ export default function NuevoServicioPage() {
         {/* DATOS DEL CLIENTE CON BUSCADOR */}
         <div style={{
           backgroundColor: 'white',
-          padding: isMobile ? '1rem' : '1.5rem',
+          padding: isMobile ? '0.75rem' : '1.5rem',
           borderRadius: '8px',
-          marginBottom: '1.5rem',
+          marginBottom: isMobile ? '1rem' : '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
-            fontSize: isMobile ? '1.1rem' : '1.25rem',
+            fontSize: isMobile ? '0.95rem' : '1.25rem',
             fontWeight: '600',
-            marginBottom: isMobile ? '1rem' : '1.5rem',
+            marginBottom: isMobile ? '0.75rem' : '1.5rem',
             borderBottom: '2px solid #e5e7eb',
-            paddingBottom: '0.5rem'
+            paddingBottom: isMobile ? '0.35rem' : '0.5rem'
           }}>
             👤 DATOS DEL CLIENTE
           </h2>
@@ -631,17 +631,17 @@ export default function NuevoServicioPage() {
         {/* TÉCNICO Y SEDE */}
         <div style={{
           backgroundColor: 'white',
-          padding: isMobile ? '1rem' : '1.5rem',
+          padding: isMobile ? '0.75rem' : '1.5rem',
           borderRadius: '8px',
-          marginBottom: '1.5rem',
+          marginBottom: isMobile ? '1rem' : '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
-            fontSize: isMobile ? '1.1rem' : '1.25rem',
+            fontSize: isMobile ? '0.95rem' : '1.25rem',
             fontWeight: '600',
-            marginBottom: isMobile ? '1rem' : '1.5rem',
+            marginBottom: isMobile ? '0.75rem' : '1.5rem',
             borderBottom: '2px solid #e5e7eb',
-            paddingBottom: '0.5rem'
+            paddingBottom: isMobile ? '0.35rem' : '0.5rem'
           }}>
             🏢 TÉCNICO Y SEDE
           </h2>
@@ -662,10 +662,10 @@ export default function NuevoServicioPage() {
                   required
                   style={{
                     width: '100%',
-                    padding: '0.75rem',
+                    padding: isMobile ? '0.5rem' : '0.75rem',
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',
-                    fontSize: '0.875rem',
+                    fontSize: isMobile ? '0.8rem' : '0.875rem',
                     backgroundColor: 'white'
                   }}
                 >
@@ -676,11 +676,11 @@ export default function NuevoServicioPage() {
                 </select>
               ) : (
                 <div style={{
-                  padding: '0.75rem',
+                  padding: isMobile ? '0.5rem' : '0.75rem',
                   backgroundColor: '#f0fdf4',
                   border: '2px solid #10b981',
                   borderRadius: '6px',
-                  fontSize: '0.875rem',
+                  fontSize: isMobile ? '0.8rem' : '0.875rem',
                   fontWeight: '600',
                   color: '#065f46'
                 }}>
@@ -706,10 +706,10 @@ export default function NuevoServicioPage() {
                   required
                   style={{
                     width: '100%',
-                    padding: '0.75rem',
+                    padding: isMobile ? '0.5rem' : '0.75rem',
                     border: '1px solid #d1d5db',
                     borderRadius: '6px',
-                    fontSize: '0.875rem',
+                    fontSize: isMobile ? '0.8rem' : '0.875rem',
                     backgroundColor: 'white'
                   }}
                 >
@@ -720,11 +720,11 @@ export default function NuevoServicioPage() {
                 </select>
               ) : (
                 <div style={{
-                  padding: '0.75rem',
+                  padding: isMobile ? '0.5rem' : '0.75rem',
                   backgroundColor: '#f0fdf4',
                   border: '2px solid #10b981',
                   borderRadius: '6px',
-                  fontSize: '0.875rem',
+                  fontSize: isMobile ? '0.8rem' : '0.875rem',
                   fontWeight: '600',
                   color: '#065f46'
                 }}>
@@ -738,15 +738,15 @@ export default function NuevoServicioPage() {
         {/* EQUIPO EN RECEPCIÓN */}
         <div style={{
           backgroundColor: 'white',
-          padding: isMobile ? '1rem' : '1.5rem',
+          padding: isMobile ? '0.75rem' : '1.5rem',
           borderRadius: '8px',
-          marginBottom: '1.5rem',
+          marginBottom: isMobile ? '1rem' : '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
-            fontSize: isMobile ? '1.1rem' : '1.25rem',
+            fontSize: isMobile ? '0.95rem' : '1.25rem',
             fontWeight: '600',
-            marginBottom: isMobile ? '1rem' : '1.5rem',
+            marginBottom: isMobile ? '0.75rem' : '1.5rem',
             borderBottom: '2px solid #e5e7eb',
             paddingBottom: '0.5rem'
           }}>
@@ -769,10 +769,10 @@ export default function NuevoServicioPage() {
                 required
                 style={{
                   width: '100%',
-                  padding: '0.75rem',
+                  padding: isMobile ? '0.625rem' : '0.75rem',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '0.875rem'
+                  fontSize: isMobile ? '0.85rem' : '0.875rem'
                 }}
               >
               <option value="LAPTOP">Laptop</option>
@@ -795,10 +795,10 @@ export default function NuevoServicioPage() {
                 placeholder="Ej: HP, Lenovo, Epson"
                 style={{
                   width: '100%',
-                  padding: '0.75rem',
+                  padding: isMobile ? '0.625rem' : '0.75rem',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '0.875rem'
+                  fontSize: isMobile ? '0.85rem' : '0.875rem'
                 }}
               />
             </div>
@@ -814,10 +814,10 @@ export default function NuevoServicioPage() {
                 placeholder="Ej: Pavilion 15"
                 style={{
                   width: '100%',
-                  padding: '0.75rem',
+                  padding: isMobile ? '0.625rem' : '0.75rem',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '0.875rem'
+                  fontSize: isMobile ? '0.85rem' : '0.875rem'
                 }}
               />
             </div>
@@ -833,14 +833,14 @@ export default function NuevoServicioPage() {
                 value={direccionServicio}
                 onChange={(e) => setDireccionServicio(e.target.value)}
                 placeholder="Dirección completa, referencias, piso, oficina..."
-                rows={2}
+                rows={isMobile ? 2 : 2}
                 required={tipoServicioForm === 'DOMICILIO'}
                 style={{
                   width: '100%',
-                  padding: '0.75rem',
+                  padding: isMobile ? '0.5rem' : '0.75rem',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '0.875rem',
+                  fontSize: isMobile ? '0.8rem' : '0.875rem',
                   resize: 'vertical'
                 }}
               />
@@ -942,20 +942,20 @@ export default function NuevoServicioPage() {
 
           {/* Otros detalles (para ambos tipos de servicio) */}
           <div style={{ marginTop: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
               Otros detalles
             </label>
             <textarea
               value={otrosDetalles}
               onChange={(e) => setOtrosDetalles(e.target.value)}
-              rows={3}
+              rows={isMobile ? 2 : 3}
               placeholder="Otros detalles del equipo..."
               style={{
                 width: '100%',
-                padding: '0.75rem',
+                padding: isMobile ? '0.5rem' : '0.75rem',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
-                fontSize: '0.875rem',
+                fontSize: isMobile ? '0.8rem' : '0.875rem',
                 resize: 'vertical'
               }}
             />
@@ -965,17 +965,17 @@ export default function NuevoServicioPage() {
         {/* FOTOS DEL EQUIPO */}
         <div style={{
           backgroundColor: 'white',
-          padding: isMobile ? '1rem' : '1.5rem',
+          padding: isMobile ? '0.75rem' : '1.5rem',
           borderRadius: '8px',
-          marginBottom: '1.5rem',
+          marginBottom: isMobile ? '1rem' : '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
-            fontSize: isMobile ? '1.1rem' : '1.25rem',
+            fontSize: isMobile ? '0.95rem' : '1.25rem',
             fontWeight: '600',
-            marginBottom: isMobile ? '1rem' : '1.5rem',
+            marginBottom: isMobile ? '0.75rem' : '1.5rem',
             borderBottom: '2px solid #e5e7eb',
-            paddingBottom: '0.5rem'
+            paddingBottom: isMobile ? '0.35rem' : '0.5rem'
           }}>
             📸 FOTOS DEL EQUIPO (Opcional)
           </h2>
@@ -1069,23 +1069,23 @@ export default function NuevoServicioPage() {
         {/* PROBLEMAS ENCONTRADOS */}
         <div style={{
           backgroundColor: 'white',
-          padding: isMobile ? '1rem' : '1.5rem',
+          padding: isMobile ? '0.75rem' : '1.5rem',
           borderRadius: '8px',
-          marginBottom: '1.5rem',
+          marginBottom: isMobile ? '1rem' : '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '1.5rem',
+            marginBottom: isMobile ? '0.75rem' : '1.5rem',
             borderBottom: '2px solid #e5e7eb',
-            paddingBottom: '0.5rem',
+            paddingBottom: isMobile ? '0.35rem' : '0.5rem',
             flexWrap: 'wrap',
-            gap: '1rem'
+            gap: isMobile ? '0.5rem' : '1rem'
           }}>
             <h2 style={{
-              fontSize: '1.25rem',
+              fontSize: isMobile ? '0.95rem' : '1.25rem',
               fontWeight: '600',
               margin: 0
             }}>
@@ -1096,13 +1096,13 @@ export default function NuevoServicioPage() {
                 type="button"
                 onClick={() => setModalAgregarProblema(true)}
                 style={{
-                  padding: '0.5rem 1rem',
+                  padding: isMobile ? '0.4rem 0.75rem' : '0.5rem 1rem',
                   backgroundColor: '#3b82f6',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
-                  fontSize: '0.875rem',
+                  fontSize: isMobile ? '0.8rem' : '0.875rem',
                   whiteSpace: 'nowrap'
                 }}
               >
@@ -1112,13 +1112,13 @@ export default function NuevoServicioPage() {
                 type="button"
                 onClick={() => setModalNuevoProblema(true)}
                 style={{
-                  padding: '0.5rem 1rem',
+                  padding: isMobile ? '0.4rem 0.75rem' : '0.5rem 1rem',
                   backgroundColor: '#10b981',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
-                  fontSize: '0.875rem',
+                  fontSize: isMobile ? '0.8rem' : '0.875rem',
                   whiteSpace: 'nowrap'
                 }}
               >
@@ -1170,20 +1170,20 @@ export default function NuevoServicioPage() {
           )}
 
           <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
               Descripción adicional
             </label>
             <textarea
               value={descripcionProblema}
               onChange={(e) => setDescripcionProblema(e.target.value)}
-              rows={3}
+              rows={isMobile ? 2 : 3}
               placeholder="Describe detalles adicionales del problema..."
               style={{
                 width: '100%',
-                padding: '0.75rem',
+                padding: isMobile ? '0.5rem' : '0.75rem',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
-                fontSize: '0.875rem',
+                fontSize: isMobile ? '0.8rem' : '0.875rem',
                 resize: 'vertical'
               }}
             />
@@ -1193,17 +1193,17 @@ export default function NuevoServicioPage() {
         {/* COSTOS Y SERVICIOS */}
         <div style={{
           backgroundColor: 'white',
-          padding: isMobile ? '1rem' : '1.5rem',
+          padding: isMobile ? '0.75rem' : '1.5rem',
           borderRadius: '8px',
-          marginBottom: '1.5rem',
+          marginBottom: isMobile ? '1rem' : '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
-            fontSize: isMobile ? '1.1rem' : '1.25rem',
+            fontSize: isMobile ? '0.95rem' : '1.25rem',
             fontWeight: '600',
-            marginBottom: isMobile ? '1rem' : '1.5rem',
+            marginBottom: isMobile ? '0.75rem' : '1.5rem',
             borderBottom: '2px solid #e5e7eb',
-            paddingBottom: '0.5rem'
+            paddingBottom: isMobile ? '0.35rem' : '0.5rem'
           }}>
             💰 COSTOS Y SERVICIOS
           </h2>
@@ -1227,10 +1227,10 @@ export default function NuevoServicioPage() {
                 step="0.01"
                 style={{
                   width: '100%',
-                  padding: '0.75rem',
+                  padding: isMobile ? '0.625rem' : '0.75rem',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '0.875rem'
+                  fontSize: isMobile ? '0.85rem' : '0.875rem'
                 }}
               />
             </div>
@@ -1246,10 +1246,10 @@ export default function NuevoServicioPage() {
                 min="0"
                 style={{
                   width: '100%',
-                  padding: '0.75rem',
+                  padding: isMobile ? '0.625rem' : '0.75rem',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '0.875rem'
+                  fontSize: isMobile ? '0.85rem' : '0.875rem'
                 }}
               />
             </div>
@@ -1259,11 +1259,11 @@ export default function NuevoServicioPage() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '1rem',
+            marginBottom: isMobile ? '0.75rem' : '1rem',
             flexWrap: 'wrap',
-            gap: '1rem'
+            gap: isMobile ? '0.5rem' : '1rem'
           }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '600', margin: 0 }}>
+            <h3 style={{ fontSize: isMobile ? '0.9rem' : '1.1rem', fontWeight: '600', margin: 0 }}>
               Servicios Adicionales
             </h3>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -1271,13 +1271,13 @@ export default function NuevoServicioPage() {
                 type="button"
                 onClick={() => setModalAgregarServicio(true)}
                 style={{
-                  padding: '0.5rem 1rem',
+                  padding: isMobile ? '0.4rem 0.75rem' : '0.5rem 1rem',
                   backgroundColor: '#3b82f6',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
-                  fontSize: '0.875rem',
+                  fontSize: isMobile ? '0.8rem' : '0.875rem',
                   whiteSpace: 'nowrap'
                 }}
               >
@@ -1287,13 +1287,13 @@ export default function NuevoServicioPage() {
                 type="button"
                 onClick={() => setModalNuevoServicio(true)}
                 style={{
-                  padding: '0.5rem 1rem',
+                  padding: isMobile ? '0.4rem 0.75rem' : '0.5rem 1rem',
                   backgroundColor: '#10b981',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
-                  fontSize: '0.875rem',
+                  fontSize: isMobile ? '0.8rem' : '0.875rem',
                   whiteSpace: 'nowrap'
                 }}
               >
@@ -1366,17 +1366,17 @@ export default function NuevoServicioPage() {
         {/* MÉTODO DE PAGO Y TOTALES */}
         <div style={{
           backgroundColor: 'white',
-          padding: isMobile ? '1rem' : '1.5rem',
+          padding: isMobile ? '0.75rem' : '1.5rem',
           borderRadius: '8px',
-          marginBottom: '1.5rem',
+          marginBottom: isMobile ? '1rem' : '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
           <h2 style={{
-            fontSize: isMobile ? '1.1rem' : '1.25rem',
+            fontSize: isMobile ? '0.95rem' : '1.25rem',
             fontWeight: '600',
-            marginBottom: isMobile ? '1rem' : '1.5rem',
+            marginBottom: isMobile ? '0.75rem' : '1.5rem',
             borderBottom: '2px solid #e5e7eb',
-            paddingBottom: '0.5rem'
+            paddingBottom: isMobile ? '0.35rem' : '0.5rem'
           }}>
             💰 COSTOS Y ADELANTO
           </h2>
@@ -1384,15 +1384,15 @@ export default function NuevoServicioPage() {
           {/* ADELANTO DEL CLIENTE */}
           <div style={{
             backgroundColor: '#eff6ff',
-            padding: '1.25rem',
+            padding: isMobile ? '0.75rem' : '1.25rem',
             borderRadius: '8px',
-            marginBottom: '1.5rem',
+            marginBottom: isMobile ? '1rem' : '1.5rem',
             border: '2px solid #3b82f6'
           }}>
             <h3 style={{
-              fontSize: '1rem',
+              fontSize: isMobile ? '0.9rem' : '1rem',
               fontWeight: '600',
-              marginBottom: '1rem',
+              marginBottom: isMobile ? '0.75rem' : '1rem',
               color: '#1e40af'
             }}>
               💳 Adelanto del Cliente
@@ -1412,10 +1412,10 @@ export default function NuevoServicioPage() {
                   onChange={(e) => setMetodoPago(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.75rem',
+                    padding: isMobile ? '0.5rem' : '0.75rem',
                     border: '1px solid #3b82f6',
                     borderRadius: '6px',
-                    fontSize: '0.875rem',
+                    fontSize: isMobile ? '0.8rem' : '0.875rem',
                     backgroundColor: 'white'
                   }}
                 >
@@ -1440,10 +1440,10 @@ export default function NuevoServicioPage() {
                   placeholder="0.00"
                   style={{
                     width: '100%',
-                    padding: '0.75rem',
+                    padding: isMobile ? '0.5rem' : '0.75rem',
                     border: '1px solid #3b82f6',
                     borderRadius: '6px',
-                    fontSize: '0.875rem'
+                    fontSize: isMobile ? '0.8rem' : '0.875rem'
                   }}
                 />
               </div>
@@ -1467,10 +1467,10 @@ export default function NuevoServicioPage() {
                 onChange={(e) => setFechaEstimada(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '0.75rem',
+                  padding: isMobile ? '0.625rem' : '0.75rem',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '0.875rem'
+                  fontSize: isMobile ? '0.85rem' : '0.875rem'
                 }}
               />
             </div>
@@ -1486,10 +1486,10 @@ export default function NuevoServicioPage() {
                 min="0"
                 style={{
                   width: '100%',
-                  padding: '0.75rem',
+                  padding: isMobile ? '0.625rem' : '0.75rem',
                   border: '1px solid #d1d5db',
                   borderRadius: '6px',
-                  fontSize: '0.875rem'
+                  fontSize: isMobile ? '0.85rem' : '0.875rem'
                 }}
               />
             </div>
@@ -1498,7 +1498,7 @@ export default function NuevoServicioPage() {
           {/* RESUMEN DE TOTALES */}
           <div style={{
             backgroundColor: '#f9fafb',
-            padding: '1.5rem',
+            padding: isMobile ? '0.75rem' : '1.5rem',
             borderRadius: '8px',
             border: '2px solid #e5e7eb'
           }}>
@@ -1571,9 +1571,10 @@ export default function NuevoServicioPage() {
 
         {/* BOTONES DE ACCIÓN */}
         <div style={{
-          display: 'flex',
-          gap: '1rem',
-          justifyContent: 'flex-end',
+          display: isMobile ? 'grid' : 'flex',
+          gridTemplateColumns: isMobile ? '1fr 1fr' : undefined,
+          gap: isMobile ? '0.75rem' : '1rem',
+          justifyContent: isMobile ? undefined : 'flex-end',
           flexWrap: 'wrap'
         }}>
           <button
@@ -1581,13 +1582,13 @@ export default function NuevoServicioPage() {
             onClick={() => router.push('/dashboard/servicios')}
             disabled={loading || subiendoFotos}
             style={{
-              padding: isMobile ? '0.75rem 1.5rem' : '1rem 2rem',
+              padding: isMobile ? '0.75rem' : '1rem 2rem',
               backgroundColor: '#6b7280',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
               cursor: loading || subiendoFotos ? 'not-allowed' : 'pointer',
-              fontSize: isMobile ? '0.875rem' : '1rem',
+              fontSize: isMobile ? '0.85rem' : '1rem',
               whiteSpace: 'nowrap'
             }}
           >
@@ -1598,13 +1599,13 @@ export default function NuevoServicioPage() {
             type="submit"
             disabled={loading || subiendoFotos}
             style={{
-              padding: isMobile ? '0.75rem 2rem' : '1rem 3rem',
+              padding: isMobile ? '0.75rem' : '1rem 3rem',
               backgroundColor: loading || subiendoFotos ? '#9ca3af' : '#10b981',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
               cursor: loading || subiendoFotos ? 'not-allowed' : 'pointer',
-              fontSize: isMobile ? '0.875rem' : '1rem',
+              fontSize: isMobile ? '0.85rem' : '1rem',
               fontWeight: '600',
               whiteSpace: 'nowrap'
             }}

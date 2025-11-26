@@ -28,18 +28,24 @@ export async function GET(request: Request) {
       where.tipoServicio = tipoServicio
     }
 
-    // Filtro de fecha por createdAt
+    // ✅ Filtro de fecha con zona horaria de Perú (UTC-5)
     if (fechaDesde || fechaHasta) {
       where.createdAt = {}
 
       if (fechaDesde) {
-        // Inicio del día en zona horaria local (Perú GMT-5)
-        where.createdAt.gte = new Date(fechaDesde + 'T00:00:00-05:00')
+        // Perú está en UTC-5, entonces 00:00:00 en Perú es 05:00:00 UTC
+        const fechaInicio = new Date(fechaDesde + 'T05:00:00.000Z')
+        where.createdAt.gte = fechaInicio
+        console.log('📅 Filtro desde:', fechaDesde, '→', fechaInicio.toISOString())
       }
 
       if (fechaHasta) {
-        // Fin del día en zona horaria local (Perú GMT-5)
-        where.createdAt.lte = new Date(fechaHasta + 'T23:59:59-05:00')
+        // 23:59:59 en Perú es 04:59:59 del día siguiente en UTC
+        const fechaFin = new Date(fechaHasta + 'T05:00:00.000Z')
+        fechaFin.setDate(fechaFin.getDate() + 1)
+        fechaFin.setMilliseconds(-1)
+        where.createdAt.lte = fechaFin
+        console.log('📅 Filtro hasta:', fechaHasta, '→', fechaFin.toISOString())
       }
     }
 
