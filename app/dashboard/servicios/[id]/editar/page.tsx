@@ -187,25 +187,26 @@ export default function EditarServicioPage() {
     cargarDatos()
   }, [])
 
-  // ✅ 2. Cargar servicio cuando los catálogos estén listos
+  // ✅ 2. Cargar servicio cuando los catálogos básicos estén listos
   useEffect(() => {
     console.log('🔍 [EDITAR] Verificando condiciones para cargar servicio:', {
       servicioId,
+      sedesLength: sedes.length,
       problemasDisponibles: problemasDisponibles.length,
       serviciosDisponibles: serviciosDisponibles.length
     })
 
-    if (servicioId && problemasDisponibles.length > 0 && serviciosDisponibles.length > 0) {
-      console.log('✅ [EDITAR] Todas las condiciones cumplidas, cargando servicio...')
+    // ✅ Solo requerimos servicioId y sedes. Los catálogos de problemas/servicios son opcionales
+    if (servicioId && sedes.length > 0) {
+      console.log('✅ [EDITAR] Condiciones cumplidas (servicioId + sedes), cargando servicio...')
       cargarServicio()
     } else {
       console.warn('⚠️ [EDITAR] No se puede cargar servicio aún:', {
         tieneServicioId: !!servicioId,
-        problemasLength: problemasDisponibles.length,
-        serviciosLength: serviciosDisponibles.length
+        sedesLength: sedes.length
       })
     }
-  }, [servicioId, problemasDisponibles, serviciosDisponibles])
+  }, [servicioId, sedes])
 
   const cargarDatos = async () => {
     try {
@@ -325,26 +326,31 @@ export default function EditarServicioPage() {
 
       // PROBLEMAS
       if (s.problemasReportados && Array.isArray(s.problemasReportados) && s.problemasReportados.length > 0) {
-        console.log('📝 IDs de problemas guardados:', s.problemasReportados)
-        console.log('📚 Problemas disponibles para buscar:', problemasDisponibles.length)
-        
-        const problemasObj = s.problemasReportados
-          .map((id: string) => {
-            const problema = problemasDisponibles.find(p => p.id === id)
-            if (problema) {
-              console.log('✅ Problema encontrado:', problema.nombre)
-              return { id: problema.id, nombre: problema.nombre }
-            } else {
-              console.log('⚠️ Problema no encontrado con ID:', id)
-            }
-            return null
-          })
-          .filter((p: any) => p !== null)
-        
-        console.log('✅ Total problemas cargados:', problemasObj.length)
-        setProblemasSeleccionados(problemasObj)
+        console.log('📝 [EDITAR] IDs de problemas guardados:', s.problemasReportados)
+        console.log('📚 [EDITAR] Problemas disponibles para buscar:', problemasDisponibles.length)
+
+        if (problemasDisponibles.length > 0) {
+          const problemasObj = s.problemasReportados
+            .map((id: string) => {
+              const problema = problemasDisponibles.find(p => p.id === id)
+              if (problema) {
+                console.log('✅ [EDITAR] Problema encontrado:', problema.nombre)
+                return { id: problema.id, nombre: problema.nombre }
+              } else {
+                console.log('⚠️ [EDITAR] Problema no encontrado con ID:', id)
+              }
+              return null
+            })
+            .filter((p: any) => p !== null)
+
+          console.log('✅ [EDITAR] Total problemas cargados:', problemasObj.length)
+          setProblemasSeleccionados(problemasObj)
+        } else {
+          console.warn('⚠️ [EDITAR] Catálogo de problemas vacío, no se pueden cargar nombres de problemas')
+          setProblemasSeleccionados([])
+        }
       } else {
-        console.log('ℹ️ No hay problemas reportados')
+        console.log('ℹ️ [EDITAR] No hay problemas reportados en el servicio')
         setProblemasSeleccionados([])
       }
       
