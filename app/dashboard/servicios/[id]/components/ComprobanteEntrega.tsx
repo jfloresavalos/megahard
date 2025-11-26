@@ -46,6 +46,8 @@ interface ServicioComprobante {
     subtotal: number
   }>
   garantiaDias: number
+  metodoPago?: string | null
+  metodoPagoSaldo?: string | null
 }
 
 const formatFecha = (fecha: string) => {
@@ -300,21 +302,34 @@ export const generarComprobantePDF = (servicio: ServicioComprobante) => {
     doc.text(`S/ ${Number(servicio.total).toFixed(2)}`, valueX, yPos, { align: 'right' })
     yPos += 6
 
-    // A Cuenta
+    // PAGADO (con método de pago si existe)
     doc.setFont('helvetica', 'normal')
-    doc.text('A Cuenta:', labelX, yPos)
-    doc.text(`S/ ${Number(servicio.aCuenta).toFixed(2)}`, valueX, yPos, { align: 'right' })
+    const pagado = Number(servicio.aCuenta || 0)
+    const saldo = Number(servicio.saldo)
+
+    // Determinar el método de pago a mostrar
+    // Priorizar metodoPagoSaldo si existe (pago al entregar), sino usar metodoPago (pago inicial)
+    const metodoPagoMostrar = servicio.metodoPagoSaldo || servicio.metodoPago
+
+    if (metodoPagoMostrar) {
+      doc.text(`Pagado (${metodoPagoMostrar}):`, labelX, yPos)
+    } else {
+      doc.text('Pagado:', labelX, yPos)
+    }
+    doc.text(`S/ ${pagado.toFixed(2)}`, valueX, yPos, { align: 'right' })
     yPos += 2
 
-    // Línea separadora
-    doc.line(labelX, yPos, valueX, yPos)
-    yPos += 5
+    // Solo mostrar SALDO si hay saldo pendiente
+    if (saldo > 0) {
+      // Línea separadora
+      doc.line(labelX, yPos, valueX, yPos)
+      yPos += 5
 
-    // SALDO
-    const saldo = Number(servicio.saldo)
-    doc.setFont('helvetica', 'bold')
-    doc.text(saldo > 0 ? 'SALDO PENDIENTE:' : 'PAGADO:', labelX, yPos)
-    doc.text(`S/ ${saldo.toFixed(2)}`, valueX, yPos, { align: 'right' })
+      // SALDO PENDIENTE
+      doc.setFont('helvetica', 'bold')
+      doc.text('SALDO PENDIENTE:', labelX, yPos)
+      doc.text(`S/ ${saldo.toFixed(2)}`, valueX, yPos, { align: 'right' })
+    }
 
     yPos += 10
 
