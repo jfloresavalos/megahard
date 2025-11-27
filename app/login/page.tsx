@@ -1,15 +1,33 @@
 "use client"
 
 import { signIn } from "next-auth/react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")  // ← Cambiado
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const router = useRouter()
+
+  // Cargar logo de la empresa
+  useEffect(() => {
+    const cargarLogo = async () => {
+      try {
+        const response = await fetch('/api/configuracion')
+        const data = await response.json()
+        if (data.success && data.configuracion?.logotipo) {
+          setLogoUrl(data.configuracion.logotipo)
+        }
+      } catch (error) {
+        console.error('Error al cargar logo:', error)
+      }
+    }
+    cargarLogo()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,8 +70,31 @@ export default function LoginPage() {
         maxWidth: '400px'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1a202c' }}>MegaHard</h1>
-          <p style={{ color: '#718096', marginTop: '0.5rem' }}>Sistema de Gestión</p>
+          {logoUrl ? (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '1rem'
+            }}>
+              <Image
+                src={logoUrl}
+                alt="Logo Empresa"
+                width={200}
+                height={80}
+                style={{
+                  objectFit: 'contain',
+                  maxWidth: '100%',
+                  height: 'auto'
+                }}
+                priority
+              />
+            </div>
+          ) : (
+            <>
+              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1a202c' }}>MegaHard</h1>
+              <p style={{ color: '#718096', marginTop: '0.5rem' }}>Sistema de Gestión</p>
+            </>
+          )}
         </div>
 
         <form onSubmit={handleSubmit}>

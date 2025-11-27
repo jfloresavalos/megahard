@@ -3,6 +3,7 @@
 import { useSession, signOut } from "next-auth/react"
 import { useRouter, usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
+import Image from "next/image"
 
 export default function DashboardLayout({
   children,
@@ -14,6 +15,7 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -24,6 +26,22 @@ export default function DashboardLayout({
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Cargar logo de la empresa
+  useEffect(() => {
+    const cargarLogo = async () => {
+      try {
+        const response = await fetch('/api/configuracion')
+        const data = await response.json()
+        if (data.success && data.configuracion?.logotipo) {
+          setLogoUrl(data.configuracion.logotipo)
+        }
+      } catch (error) {
+        console.error('Error al cargar logo:', error)
+      }
+    }
+    cargarLogo()
   }, [])
 
   useEffect(() => {
@@ -219,44 +237,66 @@ export default function DashboardLayout({
           padding: '2rem 1.5rem',
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem'
-          }}>
+          {logoUrl ? (
             <div style={{
-              width: '48px',
-              height: '48px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              borderRadius: '12px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '1.5rem',
-              fontWeight: 'bold',
-              color: 'white',
-              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
+              width: '100%'
             }}>
-              M
+              <Image
+                src={logoUrl}
+                alt="Logo Empresa"
+                width={200}
+                height={80}
+                style={{
+                  objectFit: 'contain',
+                  maxWidth: '100%',
+                  height: 'auto'
+                }}
+                priority
+              />
             </div>
-            <div>
-              <h1 style={{
+          ) : (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 fontSize: '1.5rem',
-                fontWeight: '700',
-                margin: 0,
-                color: 'white'
+                fontWeight: 'bold',
+                color: 'white',
+                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
               }}>
-                MegaHard
-              </h1>
-              <p style={{
-                fontSize: '0.75rem',
-                color: 'rgba(255, 255, 255, 0.6)',
-                margin: 0
-              }}>
-                Sistema de Gestión
-              </p>
+                M
+              </div>
+              <div>
+                <h1 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: '700',
+                  margin: 0,
+                  color: 'white'
+                }}>
+                  MegaHard
+                </h1>
+                <p style={{
+                  fontSize: '0.75rem',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  margin: 0
+                }}>
+                  Sistema de Gestión
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Menú de navegación */}
@@ -423,17 +463,32 @@ export default function DashboardLayout({
             >
               ☰
             </button>
-            <h2 style={{
-              fontSize: '1.25rem',
-              fontWeight: '700',
-              margin: 0,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
-              MegaHard
-            </h2>
+            {logoUrl ? (
+              <Image
+                src={logoUrl}
+                alt="Logo Empresa"
+                width={120}
+                height={40}
+                style={{
+                  objectFit: 'contain',
+                  maxWidth: '100%',
+                  height: 'auto'
+                }}
+                priority
+              />
+            ) : (
+              <h2 style={{
+                fontSize: '1.25rem',
+                fontWeight: '700',
+                margin: 0,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                MegaHard
+              </h2>
+            )}
           </header>
         )}
 
