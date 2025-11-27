@@ -220,7 +220,7 @@ export default function DashboardLayout({
       <aside
         style={{
           width: '280px',
-          background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+          background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
           display: 'flex',
           flexDirection: 'column',
           position: isMobile ? 'fixed' : 'sticky',
@@ -266,15 +266,15 @@ export default function DashboardLayout({
               <div style={{
                 width: '48px',
                 height: '48px',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%)',
                 borderRadius: '12px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '1.5rem',
                 fontWeight: 'bold',
-                color: 'white',
-                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
+                color: '#1a1a1a',
+                boxShadow: '0 4px 12px rgba(255, 255, 255, 0.1)'
               }}>
                 M
               </div>
@@ -318,10 +318,10 @@ export default function DashboardLayout({
                   alignItems: 'center',
                   gap: '0.75rem',
                   padding: '0.875rem 1rem',
-                  backgroundColor: item.activo ? 'rgba(102, 126, 234, 0.2)' : 'transparent',
-                  color: item.activo ? '#a5b4fc' : 'rgba(255, 255, 255, 0.7)',
+                  backgroundColor: item.activo ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  color: item.activo ? '#ffffff' : 'rgba(255, 255, 255, 0.6)',
                   border: 'none',
-                  borderLeft: item.activo ? '3px solid #667eea' : '3px solid transparent',
+                  borderLeft: item.activo ? '3px solid #ffffff' : '3px solid transparent',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontSize: '0.95rem',
@@ -332,14 +332,14 @@ export default function DashboardLayout({
                 }}
                 onMouseOver={(e) => {
                   if (!item.activo) {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
-                    e.currentTarget.style.color = 'white'
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'
+                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'
                   }
                 }}
                 onMouseOut={(e) => {
                   if (!item.activo) {
                     e.currentTarget.style.backgroundColor = 'transparent'
-                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'
+                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)'
                   }
                 }}
               >
@@ -481,10 +481,7 @@ export default function DashboardLayout({
                 fontSize: '1.25rem',
                 fontWeight: '700',
                 margin: 0,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
+                color: '#1a1a1a'
               }}>
                 MegaHard
               </h2>

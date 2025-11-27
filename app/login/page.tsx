@@ -59,15 +59,17 @@ export default function LoginPage() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      backgroundColor: '#f8f9fa',
+      padding: '1rem'
     }}>
       <div style={{
         backgroundColor: 'white',
-        padding: '2rem',
-        borderRadius: '8px',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+        padding: '2.5rem',
+        borderRadius: '16px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
         width: '100%',
-        maxWidth: '400px'
+        maxWidth: '420px',
+        border: '1px solid #e9ecef'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           {logoUrl ? (
@@ -170,14 +172,30 @@ export default function LoginPage() {
             disabled={loading}
             style={{
               width: '100%',
-              backgroundColor: loading ? '#9ca3af' : '#2563eb',
+              backgroundColor: loading ? '#9ca3af' : '#1a1a1a',
               color: 'white',
-              padding: '0.75rem',
-              borderRadius: '6px',
+              padding: '0.875rem',
+              borderRadius: '8px',
               fontSize: '1rem',
               fontWeight: '600',
               border: 'none',
-              cursor: loading ? 'not-allowed' : 'pointer'
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: loading ? 'none' : '0 2px 4px rgba(0, 0, 0, 0.1)'
+            }}
+            onMouseOver={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundColor = '#000000'
+                e.currentTarget.style.transform = 'translateY(-1px)'
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.15)'
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundColor = '#1a1a1a'
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)'
+              }
             }}
           >
             {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
