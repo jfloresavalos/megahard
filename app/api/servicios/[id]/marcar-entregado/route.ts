@@ -83,6 +83,27 @@ export async function POST(
       );
     }
 
+    // ✅ Validar que las fechas sean cronológicas
+    const fechaActual = new Date();
+    const fechaRecepcion = new Date(servicio.fechaRecepcion);
+
+    if (fechaActual < fechaRecepcion) {
+      return NextResponse.json(
+        { error: 'La fecha de entrega no puede ser anterior a la fecha de recepción' },
+        { status: 400 }
+      );
+    }
+
+    if (servicio.fechaReparacion) {
+      const fechaReparacion = new Date(servicio.fechaReparacion);
+      if (fechaActual < fechaReparacion) {
+        return NextResponse.json(
+          { error: 'La fecha de entrega no puede ser anterior a la fecha de reparación' },
+          { status: 400 }
+        );
+      }
+    }
+
     // ✅ VALIDAR STOCK DE PRODUCTOS VENDIDOS
     if (productosVendidos.length > 0) {
       for (const item of productosVendidos) {
@@ -141,7 +162,7 @@ export async function POST(
 
     const updateData: any = {
       estado: 'ENTREGADO',
-      fechaEntregaReal: new Date(fechaEntrega),
+      fechaEntregaReal: new Date(), // Usar fecha actual de entrega
       quienRecibeNombre: quienRecibeNombre || null,
       quienRecibeDni: quienRecibeDni || null,
       total: nuevoTotal, // ✅ Actualizar total

@@ -14,8 +14,77 @@ export async function GET(
       where: {
         id: id
       },
-      include: {
-        cliente: true,
+      select: {
+        // Campos básicos del servicio
+        id: true,
+        numeroServicio: true,
+        estado: true,
+        prioridad: true,
+
+        // Cliente
+        clienteId: true,
+        clienteNombre: true,
+        clienteDni: true,
+        clienteCelular: true,
+        cliente: {
+          select: {
+            id: true,
+            nombre: true,
+            numeroDoc: true,
+            telefono: true,
+            email: true,
+            direccion: true
+          }
+        },
+
+        // Equipo
+        tipoEquipo: true,
+        marcaModelo: true,
+        descripcionEquipo: true,
+        dejoSinCargador: true,
+        dejoAccesorios: true,
+        esCotizacion: true,
+        faltaPernos: true,
+        tieneAranaduras: true,
+        otrosDetalles: true,
+
+        // Problema
+        problemasReportados: true,
+        otrosProblemas: true,
+        descripcionProblema: true,
+        fotosEquipo: true,
+
+        // Reparación
+        diagnostico: true,
+        solucion: true,
+        fotosDespues: true,
+
+        // Costos
+        costoServicio: true,
+        costoRepuestos: true,
+        total: true,
+        aCuenta: true,
+        saldo: true,
+        serviciosAdicionales: true,
+        metodoPago: true,
+        metodoPagoSaldo: true,
+
+        // Fechas
+        fechaRecepcion: true,
+        fechaEntregaEstimada: true,
+        fechaReparacion: true,
+        fechaEntregaReal: true,
+        fechaUltimoPago: true,
+
+        // Otros
+        garantiaDias: true,
+        tipoServicio: true,
+        direccionServicio: true,
+        quienRecibeNombre: true,
+        quienRecibeDni: true,
+
+        // Usuario y Sede
+        usuarioId: true,
         usuario: {
           select: {
             id: true,
@@ -23,9 +92,23 @@ export async function GET(
             username: true
           }
         },
-        sede: true,
+        sedeId: true,
+        sede: {
+          select: {
+            id: true,
+            nombre: true,
+            direccion: true,
+            telefono: true
+          }
+        },
+
+        // Items (repuestos)
         items: {
-          include: {
+          select: {
+            id: true,
+            cantidad: true,
+            precioUnit: true,
+            subtotal: true,
             producto: {
               select: {
                 id: true,
@@ -38,7 +121,22 @@ export async function GET(
           orderBy: {
             id: 'asc'
           }
-        }
+        },
+
+        // Tipo de servicio
+        tipoServicioId: true,
+        tipoServicioRelacion: {
+          select: {
+            id: true,
+            categoria: true,
+            nombre: true,
+            descripcion: true
+          }
+        },
+
+        // Timestamps
+        createdAt: true,
+        updatedAt: true
       }
     })
 
@@ -238,7 +336,7 @@ export async function PUT(
       descripcionProblema,
       fotosEquipo: fotosEquipo || [],
       metodoPago,
-      fechaEntregaEstimada: fechaEstimada ? new Date(fechaEstimada) : null,
+      fechaEntregaEstimada: fechaEstimada ? new Date(fechaEstimada + 'T00:00:00') : null,
       garantiaDias: parseInt(garantiaDias) || 30,
       prioridad: prioridad || servicioExistente.prioridad
     }

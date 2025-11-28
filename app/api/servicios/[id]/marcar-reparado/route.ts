@@ -93,6 +93,16 @@ export async function POST(
       );
     }
 
+    // ✅ Validar que la fecha de reparación sea posterior a la fecha de recepción
+    const fechaActual = new Date();
+    const fechaRecepcion = new Date(servicio.fechaRecepcion);
+    if (fechaActual < fechaRecepcion) {
+      return NextResponse.json(
+        { error: 'La fecha de reparación no puede ser anterior a la fecha de recepción' },
+        { status: 400 }
+      );
+    }
+
     // 3. --- LÓGICA DE NEGOCIO (TRANSACCIÓN) ---
     const costoTotalRepuestos = repuestosUsados.reduce(
       (sum, item) => sum + item.subtotal,
@@ -109,6 +119,7 @@ export async function POST(
           estado: 'REPARADO',
           diagnostico,
           solucion,
+          fechaReparacion: new Date(), // Guardar fecha actual de reparación
           fotosDespues: {
             push: fotosDespues,
           },

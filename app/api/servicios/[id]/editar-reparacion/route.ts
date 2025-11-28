@@ -325,16 +325,8 @@ export async function POST(
         },
       });
 
-      // 5. Registrar en historial
-      await tx.servicioHistorial.create({
-        data: {
-          servicioId: servicioId,
-          estadoAnterior: servicio.estado,
-          estadoNuevo: servicio.estado,
-          comentario: `Reparación editada. Diagnóstico y solución actualizados. Repuestos: ${itemsAEliminar.length} eliminados, ${itemsAAgregar.length} agregados, ${itemsAActualizar.length} modificados.`,
-          usuarioId: session.user.id,
-        }
-      });
+      // ✅ NO registrar en historial cuando se edita reparación
+      // Solo se registra el historial cuando se cambia de estado
 
       return servicioActualizado;
     });

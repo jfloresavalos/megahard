@@ -312,7 +312,7 @@ export async function POST(request: Request) {
         serviciosAdicionales: serviciosAdicionales || [],
         metodoPago,
         fechaRecepcion: new Date(),
-        fechaEntregaEstimada: fechaEstimada ? new Date(fechaEstimada) : null,
+        fechaEntregaEstimada: fechaEstimada ? new Date(fechaEstimada + 'T00:00:00') : null,
         garantiaDias: parseInt(garantiaDias) || 30,
         fotosEquipo: fotosEquipo || [], // ✅ CORREGIDO - USA EL PARÁMETRO
         estado: estadoInicial,

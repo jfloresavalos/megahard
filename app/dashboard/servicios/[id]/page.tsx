@@ -8,6 +8,7 @@ import ModalMarcarReparado from "../components/ModalMarcarReparado"
 import ModalEditarReparacion from "./components/ModalEditarReparacion"
 import ModalMarcarEntregado from "./components/ModalMarcarEntregado"
 import ModalAnularServicio from "./components/ModalAnularServicio"
+import ModalRegistrarPago from "./components/ModalRegistrarPago"
 import { generarComprobantePDF } from "./components/ComprobanteEntrega"
 
 interface Servicio {
@@ -39,7 +40,9 @@ interface Servicio {
   metodoPago: string
   fechaRecepcion: string
   fechaEntregaEstimada: string
+  fechaReparacion: string | null
   fechaEntregaReal: string
+  fechaUltimoPago: string | null
   estado: string
   prioridad: string
   garantiaDias: number
@@ -106,6 +109,7 @@ useEffect(() => {
   const [isModalEditarReparacionOpen, setIsModalEditarReparacionOpen] = useState(false)
   const [isModalEntregadoOpen, setIsModalEntregadoOpen] = useState(false)
   const [isModalAnularOpen, setIsModalAnularOpen] = useState(false)
+  const [isModalRegistrarPagoOpen, setIsModalRegistrarPagoOpen] = useState(false)
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 768)
@@ -193,6 +197,10 @@ useEffect(() => {
     cargarServicio()
   }
 
+  const handleModalRegistrarPagoClose = () => {
+    setIsModalRegistrarPagoOpen(false)
+    cargarServicio()
+  }
 
   const cambiarEstadoServicio = async (nuevoEstado: string) => {
     const confirmar = confirm(`¿Estás seguro de cambiar el estado a "${nuevoEstado.replace(/_/g, ' ')}"?`)
@@ -272,6 +280,17 @@ useEffect(() => {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
+    })
+  }
+
+  const formatearFechaConHora = (fecha: string) => {
+    if (!fecha) return 'N/A'
+    return new Date(fecha).toLocaleDateString('es-PE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
     })
   }
 
@@ -367,6 +386,21 @@ useEffect(() => {
             {servicio.prioridad}
           </div>
 
+          {/* Badge: Pendiente de Pago (si está ENTREGADO y tiene saldo) */}
+          {servicio.estado === 'ENTREGADO' && Number(servicio.saldo) > 0 && (
+            <div style={{
+              padding: '0.75rem 1.5rem',
+              borderRadius: '8px',
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              backgroundColor: '#fef3c7',
+              color: '#d97706',
+              border: '2px solid #f59e0b'
+            }}>
+              💳 Pendiente de Pago
+            </div>
+          )}
+
           <button
             onClick={descargarPDF}
             style={{
@@ -403,6 +437,27 @@ useEffect(() => {
               }}
             >
               📄 Comprobante PDF
+            </button>
+          )}
+
+          {/* BOTÓN: Registrar Pago (Solo si está ENTREGADO y tiene saldo pendiente) */}
+          {servicio.estado === 'ENTREGADO' && Number(servicio.saldo) > 0 && (
+            <button
+              onClick={() => setIsModalRegistrarPagoOpen(true)}
+              style={{
+                padding: isMobile ? '0.5rem 1rem' : '0.75rem 1.5rem',
+                backgroundColor: '#f59e0b',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: isMobile ? '0.875rem' : '0.95rem',
+                fontWeight: '600',
+                whiteSpace: 'nowrap',
+                width: isMobile ? '100%' : 'auto'
+              }}
+            >
+              💰 Registrar Pago
             </button>
           )}
 
@@ -1041,7 +1096,7 @@ useEffect(() => {
               </div>
               <div>
                 <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Fecha de Recepción</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: '600' }}>{formatearFecha(servicio.fechaRecepcion)}</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: '600' }}>{formatearFechaConHora(servicio.fechaRecepcion)}</div>
               </div>
               <div>
                 <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Fecha Estimada</div>
@@ -1116,6 +1171,25 @@ useEffect(() => {
               }}>
                 🩺 DIAGNÓSTICO Y SOLUCIÓN
               </h2>
+              {servicio.fechaReparacion && (
+                <div style={{
+                  marginBottom: '1rem',
+                  padding: '0.75rem',
+                  backgroundColor: '#d1fae5',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  color: '#065f46',
+                  fontWeight: '600'
+                }}>
+                  📅 Fecha de Reparación: {new Date(servicio.fechaReparacion).toLocaleDateString('es-PE', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              )}
               {servicio.diagnostico && (
                 <div style={{ marginBottom: '1rem' }}>
                   <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#047857', marginBottom: '0.5rem' }}>
@@ -1481,7 +1555,7 @@ useEffect(() => {
                 }}>
                   <div>
                     <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Fecha de Entrega</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: '600' }}>{formatearFecha(servicio.fechaEntregaReal)}</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: '600' }}>{formatearFechaConHora(servicio.fechaEntregaReal)}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Recogido por</div>
@@ -1622,6 +1696,20 @@ useEffect(() => {
                         <span style={{ fontWeight: '600' }}>{servicio.metodoPagoSaldo}</span>
                       </div>
                     )}
+                    {servicio.fechaUltimoPago && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                        <span>Último pago registrado:</span>
+                        <span style={{ fontWeight: '600' }}>
+                          {new Date(servicio.fechaUltimoPago).toLocaleDateString('es-PE', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1754,6 +1842,12 @@ useEffect(() => {
           <ModalAnularServicio
             isOpen={isModalAnularOpen}
             onClose={handleModalAnularClose}
+            servicio={servicio}
+          />
+          {/* ✅ NUEVO: Modal Registrar Pago */}
+          <ModalRegistrarPago
+            isOpen={isModalRegistrarPagoOpen}
+            onClose={handleModalRegistrarPagoClose}
             servicio={servicio}
           />
         </>

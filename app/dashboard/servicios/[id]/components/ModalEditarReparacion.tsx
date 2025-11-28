@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import ModalBuscarProducto from "./ModalBuscarProducto"
 
 interface Producto {
   id: string
@@ -22,6 +23,7 @@ interface ModalEditarReparacionProps {
   servicio: {
     id: string
     numeroServicio: string
+    sedeId: string
     diagnostico: string | null
     solucion: string | null
     items?: Array<{
@@ -46,9 +48,9 @@ export default function ModalEditarReparacion({ isOpen, onClose, servicio }: Mod
   const [solucion, setSolucion] = useState('')
   const [items, setItems] = useState<ItemReparacion[]>([])
   const [productos, setProductos] = useState<Producto[]>([])
-  const [busqueda, setBusqueda] = useState('')
-  const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null)
-  const [cantidad, setCantidad] = useState(1)
+
+  // Estado para modal de búsqueda
+  const [modalBuscarOpen, setModalBuscarOpen] = useState(false)
 
   // Fotos
   const [fotosExistentes, setFotosExistentes] = useState<string[]>([])
@@ -95,37 +97,19 @@ export default function ModalEditarReparacion({ isOpen, onClose, servicio }: Mod
     }
   }
 
-  const productosFiltrados = productos.filter(p =>
-    p.codigo.toLowerCase().includes(busqueda.toLowerCase()) ||
-    p.nombre.toLowerCase().includes(busqueda.toLowerCase())
-  )
-
-  const agregarItem = () => {
-    if (!productoSeleccionado) {
-      alert('Seleccione un producto')
-      return
-    }
-
-    if (cantidad <= 0 || cantidad > productoSeleccionado.stock) {
-      alert(`Cantidad inválida. Stock disponible: ${productoSeleccionado.stock}`)
-      return
-    }
-
-    const yaExiste = items.find(i => i.productoId === productoSeleccionado.id)
-    if (yaExiste) {
-      alert('El producto ya está en la lista')
+  // Agregar producto desde el modal
+  const agregarRepuesto = (producto: Producto, cantidad: number, precioFinal: number) => {
+    // Verificar si ya está agregado
+    if (items.find(i => i.productoId === producto.id)) {
+      alert("⚠️ Este repuesto ya está agregado")
       return
     }
 
     setItems([...items, {
-      productoId: productoSeleccionado.id,
-      cantidad,
-      precioUnit: productoSeleccionado.precioVenta
+      productoId: producto.id,
+      cantidad: cantidad,
+      precioUnit: precioFinal
     }])
-
-    setProductoSeleccionado(null)
-    setCantidad(1)
-    setBusqueda('')
   }
 
   const eliminarItem = (productoId: string) => {
@@ -385,109 +369,52 @@ export default function ModalEditarReparacion({ isOpen, onClose, servicio }: Mod
           {/* Repuestos */}
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.875rem' }}>
-              Repuestos Utilizados
+              🔩 Repuestos Utilizados (Opcional)
             </label>
 
-            {/* Buscador de productos */}
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+            {/* INPUT CON LUPA PARA ABRIR MODAL */}
+            <div style={{ position: "relative" }}>
               <input
                 type="text"
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar producto..."
+                placeholder="🔍 Buscar repuesto del inventario..."
+                readOnly
+                onClick={() => setModalBuscarOpen(true)}
                 style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem'
+                  width: "100%",
+                  padding: "0.75rem 3rem 0.75rem 1rem",
+                  border: "2px solid #3b82f6",
+                  borderRadius: "8px",
+                  fontSize: "0.95rem",
+                  cursor: "pointer",
+                  backgroundColor: "white",
                 }}
               />
+              <button
+                type="button"
+                onClick={() => setModalBuscarOpen(true)}
+                style={{
+                  position: "absolute",
+                  right: "0.5rem",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  padding: "0.5rem",
+                  backgroundColor: "#3b82f6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "36px",
+                  height: "36px",
+                  fontSize: "1.1rem",
+                }}
+                title="Buscar producto"
+              >
+                🔍
+              </button>
             </div>
-
-            {/* Resultados de búsqueda */}
-            {busqueda && (
-              <div style={{
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                maxHeight: '200px',
-                overflow: 'auto',
-                marginBottom: '1rem'
-              }}>
-                {productosFiltrados.map(producto => (
-                  <div
-                    key={producto.id}
-                    onClick={() => {
-                      setProductoSeleccionado(producto)
-                      setBusqueda('')
-                    }}
-                    style={{
-                      padding: '0.75rem',
-                      cursor: 'pointer',
-                      borderBottom: '1px solid #f3f4f6',
-                      fontSize: '0.875rem'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                  >
-                    <div style={{ fontWeight: '600' }}>{producto.codigo} - {producto.nombre}</div>
-                    <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                      Stock: {producto.stock} | Precio: S/ {producto.precioVenta.toFixed(2)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Producto seleccionado */}
-            {productoSeleccionado && (
-              <div style={{
-                padding: '1rem',
-                backgroundColor: '#dbeafe',
-                borderRadius: '6px',
-                marginBottom: '1rem'
-              }}>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '600', fontSize: '0.875rem' }}>
-                      {productoSeleccionado.codigo} - {productoSeleccionado.nombre}
-                    </div>
-                    <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                      Stock: {productoSeleccionado.stock}
-                    </div>
-                  </div>
-                  <input
-                    type="number"
-                    value={cantidad}
-                    onChange={(e) => setCantidad(parseInt(e.target.value) || 1)}
-                    min="1"
-                    max={productoSeleccionado.stock}
-                    style={{
-                      width: '80px',
-                      padding: '0.5rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      fontSize: '0.875rem'
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={agregarItem}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    Agregar
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Lista de items */}
             {items.length > 0 && (
@@ -693,6 +620,15 @@ export default function ModalEditarReparacion({ isOpen, onClose, servicio }: Mod
           </button>
         </div>
       </div>
+
+      {/* MODAL BUSCAR PRODUCTO */}
+      <ModalBuscarProducto
+        isOpen={modalBuscarOpen}
+        onClose={() => setModalBuscarOpen(false)}
+        sedeId={servicio.sedeId}
+        onSeleccionar={agregarRepuesto}
+        tituloModal="Buscar Repuesto"
+      />
     </div>
   )
 }

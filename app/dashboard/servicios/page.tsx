@@ -540,6 +540,23 @@ export default function ServiciosTecnicosPage() {
                 </div>
               </div>
 
+              {/* Badge: Pendiente de Pago */}
+              {servicio.estado === 'ENTREGADO' && Number(servicio.saldo) > 0 && (
+                <div style={{
+                  marginTop: '0.75rem',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  backgroundColor: '#fef3c7',
+                  color: '#d97706',
+                  border: '2px solid #f59e0b'
+                }}>
+                  💳 Pago Pendiente
+                </div>
+              )}
+
               {/* Badge de prioridad */}
               {servicio.prioridad !== 'NORMAL' && (
                 <div style={{

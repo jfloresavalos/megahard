@@ -280,6 +280,7 @@ model ServicioTecnico {
   garantiaDias           Int                 @default(30)
   fechaRecepcion         DateTime            @default(now())
   fechaEntregaEstimada   DateTime?
+  fechaReparacion        DateTime?           // Fecha cuando se marca como REPARADO
   fechaEntregaReal       DateTime?
   usuarioId              String
   sedeId                 String
@@ -295,6 +296,7 @@ model ServicioTecnico {
   adelantoDevuelto       Decimal?            @db.Decimal(10, 2)
   metodoDevolucion       String?
   usuarioCancelacionId   String?
+  fechaUltimoPago        DateTime?           // Fecha del último pago registrado después de entrega
 
   // ✅ NUEVOS CAMPOS PARA SERVICIOS A DOMICILIO
   tipoServicio           String              @default("TALLER") // "TALLER" o "DOMICILIO"
