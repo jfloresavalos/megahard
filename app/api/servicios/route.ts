@@ -124,6 +124,7 @@ export async function POST(request: Request) {
 
     console.log('📝 Creando servicio técnico...', tipoServicioForm)
     console.log('📸 Fotos recibidas:', fotosEquipo) // ✅ DEBUG
+    console.log('📅 fechaEstimada recibida:', fechaEstimada, 'tipo:', typeof fechaEstimada) // ✅ DEBUG
 
     // ✅ Determinar prefijo según tipo de servicio
     const prefijo = tipoServicioForm === 'DOMICILIO' ? 'SD' : 'ST'
@@ -312,7 +313,7 @@ export async function POST(request: Request) {
         serviciosAdicionales: serviciosAdicionales || [],
         metodoPago,
         fechaRecepcion: new Date(),
-        fechaEntregaEstimada: fechaEstimada && fechaEstimada.trim() ? new Date(fechaEstimada + 'T00:00:00') : null,
+        fechaEntregaEstimada: fechaEstimada ? new Date(fechaEstimada) : null,
         garantiaDias: parseInt(garantiaDias) || 30,
         fotosEquipo: fotosEquipo || [], // ✅ CORREGIDO - USA EL PARÁMETRO
         estado: estadoInicial,

@@ -336,7 +336,7 @@ export async function PUT(
       descripcionProblema,
       fotosEquipo: fotosEquipo || [],
       metodoPago,
-      fechaEntregaEstimada: fechaEstimada ? new Date(fechaEstimada + 'T00:00:00') : null,
+      fechaEntregaEstimada: fechaEstimada ? new Date(fechaEstimada) : null,
       garantiaDias: parseInt(garantiaDias) || 30,
       prioridad: prioridad || servicioExistente.prioridad
     }
