@@ -48,6 +48,23 @@ interface MetodoPago {
   activo: boolean
 }
 
+interface Equipo {
+  id: string // ID temporal para el formulario (ej: "equipo-1", "equipo-2")
+  tipoEquipo: string
+  marcaModelo: string
+  descripcionEquipo: string
+  dejoSinCargador: boolean
+  dejoAccesorios: boolean
+  esCotizacion: boolean
+  problemasSeleccionados: ProblemaSeleccionado[]
+  otrosProblemas: string
+  faltaPernos: boolean
+  tieneAranaduras: boolean
+  otrosDetalles: string
+  costoServicio: number
+  fotos: string[] // URLs de fotos ya subidas
+}
+
 export default function NuevoServicioPage() {
   const { data: session } = useSession()
   const router = useRouter()
@@ -125,6 +142,111 @@ export default function NuevoServicioPage() {
   const [fotos, setFotos] = useState<File[]>([])
   const [previsualizaciones, setPrevisualizaciones] = useState<string[]>([])
   const [subiendoFotos, setSubiendoFotos] = useState(false)
+
+  // ✅ MÚLTIPLES EQUIPOS
+  const [equipos, setEquipos] = useState<Equipo[]>([])
+  const [equipoIndex, setEquipoIndex] = useState<number | null>(null) // null = nuevo equipo, número = editando
+
+  // Función para resetear formulario de equipo
+  const resetearFormularioEquipo = () => {
+    setTipoEquipo('LAPTOP')
+    setMarcaEquipo('')
+    setDescripcionEquipo('')
+    setDejoSinCargador(false)
+    setDejoAccesorios(false)
+    setEsCotizacion(false)
+    setProblemasSeleccionados([])
+    setDescripcionProblema('')
+    setFaltaPernos(false)
+    setTieneAranaduras(false)
+    setOtrosDetalles('')
+    setCostoServicio('0')
+    setFotos([])
+    setPrevisualizaciones([])
+    setEquipoIndex(null)
+  }
+
+  // Función para agregar/actualizar equipo
+  const agregarOActualizarEquipo = () => {
+    // Validaciones del equipo actual
+    if (!tipoEquipo) {
+      alert('Por favor seleccione el tipo de equipo')
+      return
+    }
+
+    if (problemasSeleccionados.length === 0 && !descripcionProblema) {
+      alert('Por favor seleccione al menos un problema o describa el problema')
+      return
+    }
+
+    if (parseFloat(costoServicio) <= 0) {
+      alert('El costo del servicio debe ser mayor a 0')
+      return
+    }
+
+    const nuevoEquipo: Equipo = {
+      id: equipoIndex !== null ? equipos[equipoIndex].id : `equipo-${Date.now()}`,
+      tipoEquipo,
+      marcaModelo,
+      descripcionEquipo,
+      dejoSinCargador,
+      dejoAccesorios,
+      esCotizacion,
+      problemasSeleccionados,
+      otrosProblemas: descripcionProblema,
+      faltaPernos,
+      tieneAranaduras,
+      otrosDetalles,
+      costoServicio: parseFloat(costoServicio),
+      fotos: previsualizaciones // URLs ya subidas
+    }
+
+    if (equipoIndex !== null) {
+      // Editar equipo existente
+      const nuevosEquipos = [...equipos]
+      nuevosEquipos[equipoIndex] = nuevoEquipo
+      setEquipos(nuevosEquipos)
+    } else {
+      // Agregar nuevo equipo
+      setEquipos([...equipos, nuevoEquipo])
+    }
+
+    resetearFormularioEquipo()
+    alert('Equipo agregado correctamente')
+  }
+
+  // Función para editar equipo
+  const editarEquipo = (index: number) => {
+    const equipo = equipos[index]
+    setTipoEquipo(equipo.tipoEquipo)
+    setMarcaEquipo(equipo.marcaModelo)
+    setDescripcionEquipo(equipo.descripcionEquipo)
+    setDejoSinCargador(equipo.dejoSinCargador)
+    setDejoAccesorios(equipo.dejoAccesorios)
+    setEsCotizacion(equipo.esCotizacion)
+    setProblemasSeleccionados(equipo.problemasSeleccionados)
+    setDescripcionProblema(equipo.otrosProblemas)
+    setFaltaPernos(equipo.faltaPernos)
+    setTieneAranaduras(equipo.tieneAranaduras)
+    setOtrosDetalles(equipo.otrosDetalles)
+    setCostoServicio(equipo.costoServicio.toString())
+    setPrevisualizaciones(equipo.fotos)
+    setEquipoIndex(index)
+  }
+
+  // Función para eliminar equipo
+  const eliminarEquipo = (index: number) => {
+    if (confirm('¿Está seguro que desea eliminar este equipo?')) {
+      setEquipos(equipos.filter((_, i) => i !== index))
+      if (equipoIndex === index) {
+        resetearFormularioEquipo()
+      }
+    }
+  }
+
+  // Calcular costo total de todos los equipos
+  const costoTotalEquipos = equipos.reduce((sum, equipo) => sum + equipo.costoServicio, 0)
+  const saldoTotal = costoTotalEquipos - parseFloat(aCuenta)
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -367,7 +489,7 @@ export default function NuevoServicioPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validaciones
+    // Validaciones del cliente
     if (!clienteNombre || !clienteDni || !clienteCelular) {
       alert('Por favor complete los datos del cliente')
       return
@@ -401,8 +523,9 @@ export default function NuevoServicioPage() {
       return
     }
 
-    if (problemasSeleccionados.length === 0 && !descripcionProblema) {
-      alert('Por favor seleccione al menos un problema o describa el problema')
+    // ✅ Validaciones de equipos
+    if (equipos.length === 0) {
+      alert('Por favor agregue al menos un equipo')
       return
     }
 
@@ -411,21 +534,18 @@ export default function NuevoServicioPage() {
       return
     }
 
-    if (parseFloat(costoServicio) <= 0) {
-      alert('⚠️ El costo del servicio debe ser mayor a 0')
-      return
-    }
-
     setLoading(true)
 
     try {
-      // Subir fotos primero
-      let fotosEquipo: string[] = []
-      if (fotos.length > 0) {
-        console.log('📸 Subiendo fotos...')
-        fotosEquipo = await subirFotos()
-        console.log('✅ Fotos subidas:', fotosEquipo)
-      }
+      // Subir fotos de los equipos que las tienen
+      const equiposConFotos = await Promise.all(
+        equipos.map(async (equipo) => {
+          return {
+            ...equipo,
+            fotos: equipo.fotos // Ya están subidas, solo pasar las URLs
+          }
+        })
+      )
 
       const response = await fetch('/api/servicios', {
         method: 'POST',
@@ -437,28 +557,16 @@ export default function NuevoServicioPage() {
           clienteCelular,
           tecnicoId,
           sedeId,
-          tipoEquipo,
-          marcaEquipo,
-          descripcionEquipo,
-          // ✅ TIPO DE SERVICIO Y DIRECCIÓN
+          // ✅ ENVIAR ARRAY DE EQUIPOS
+          equipos: equiposConFotos,
+          // Datos generales del servicio
           tipoServicioForm,
           direccionServicio: tipoServicioForm === 'DOMICILIO' ? direccionServicio : null,
-          // Campos solo para TALLER
-          dejoSinCargador,
-          dejoAccesorios,
-          esCotizacion,
-          problemasReportados: problemasSeleccionados.map(p => p.id),
-          otrosProblemas: descripcionProblema,
-          faltaPernos,
-          tieneAranaduras,
-          otrosDetalles,
-          costoServicio: parseFloat(costoServicio),
           serviciosAdicionales,
           metodoPago,
           fechaEstimada: fechaEstimada ? new Date(fechaEstimada + 'T00:00:00-05:00').toISOString() : null,
           garantiaDias: parseInt(garantiaDias),
-          aCuenta: parseFloat(aCuenta),
-          fotosEquipo
+          aCuenta: parseFloat(aCuenta) || 0
         })
       })
 
