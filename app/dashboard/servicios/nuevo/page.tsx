@@ -843,6 +843,139 @@ export default function NuevoServicioPage() {
           </div>
         </div>
 
+        {/* EQUIPOS AGREGADOS - RESUMEN */}
+        {equipos.length > 0 && (
+          <div style={{
+            backgroundColor: '#f0fdf4',
+            padding: isMobile ? '0.75rem' : '1.5rem',
+            borderRadius: '8px',
+            marginBottom: isMobile ? '1rem' : '1.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            border: '2px solid #10b981'
+          }}>
+            <h2 style={{
+              fontSize: isMobile ? '0.95rem' : '1.25rem',
+              fontWeight: '600',
+              marginBottom: isMobile ? '0.75rem' : '1.5rem',
+              color: '#065f46'
+            }}>
+              ✅ EQUIPOS AGREGADOS ({equipos.length})
+            </h2>
+            
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(250px, 1fr))',
+              gap: '1rem'
+            }}>
+              {equipos.map((equipo, index) => (
+                <div
+                  key={equipo.id}
+                  style={{
+                    backgroundColor: 'white',
+                    padding: '1rem',
+                    borderRadius: '6px',
+                    border: '1px solid #d1d5db',
+                    position: 'relative'
+                  }}
+                >
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong style={{ fontSize: '0.9rem' }}>📱 {equipo.tipoEquipo}</strong>
+                    <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', color: '#6b7280' }}>
+                      {equipo.marcaModelo}
+                    </p>
+                  </div>
+                  
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <p style={{ margin: '0.25rem 0', fontSize: '0.85rem' }}>
+                      <strong>Problema:</strong> {equipo.descripcionProblema}
+                    </p>
+                    {equipo.problemasSeleccionados.length > 0 && (
+                      <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                        {equipo.problemasSeleccionados.map(p => (
+                          <span
+                            key={p.id}
+                            style={{
+                              fontSize: '0.7rem',
+                              backgroundColor: '#dbeafe',
+                              color: '#1e40af',
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '3px'
+                            }}
+                          >
+                            {p.nombre}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div style={{
+                    backgroundColor: '#fef3c7',
+                    padding: '0.5rem',
+                    borderRadius: '4px',
+                    marginBottom: '0.75rem',
+                    textAlign: 'center',
+                    fontSize: '0.9rem',
+                    fontWeight: '600',
+                    color: '#92400e'
+                  }}>
+                    S/ {equipo.costoServicio.toFixed(2)}
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => editarEquipo(index)}
+                      style={{
+                        flex: 1,
+                        padding: '0.4rem',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: '600'
+                      }}
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => eliminarEquipo(index)}
+                      style={{
+                        flex: 1,
+                        padding: '0.4rem',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: '600'
+                      }}
+                    >
+                      🗑️ Eliminar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{
+              marginTop: '1rem',
+              paddingTop: '1rem',
+              borderTop: '2px solid #d1d5db',
+              textAlign: 'right',
+              fontSize: '1rem',
+              fontWeight: '700',
+              color: '#065f46'
+            }}>
+              COSTO TOTAL: S/ {costoTotalEquipos.toFixed(2)}
+            </div>
+          </div>
+        )}
+
         {/* EQUIPO EN RECEPCIÓN */}
         <div style={{
           backgroundColor: 'white',
@@ -858,7 +991,7 @@ export default function NuevoServicioPage() {
             borderBottom: '2px solid #e5e7eb',
             paddingBottom: '0.5rem'
           }}>
-            💻 EQUIPO EN RECEPCIÓN
+            {equipoIndex !== null ? '✏️ EDITAR EQUIPO' : '💻 AGREGAR EQUIPO'}
           </h2>
 
           <div style={{
@@ -1298,6 +1431,58 @@ export default function NuevoServicioPage() {
           </div>
         </div>
 
+        {/* BOTÓN AGREGAR/ACTUALIZAR EQUIPO */}
+        <div style={{
+          display: 'flex',
+          gap: '1rem',
+          marginBottom: isMobile ? '1rem' : '1.5rem',
+          flexWrap: 'wrap'
+        }}>
+          <button
+            type="button"
+            onClick={agregarEquipo}
+            style={{
+              flex: 1,
+              minWidth: '150px',
+              padding: isMobile ? '0.75rem' : '1rem',
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: isMobile ? '0.85rem' : '1rem',
+              fontWeight: '600',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {equipoIndex !== null ? '✏️ Actualizar Equipo' : '➕ Agregar Equipo'}
+          </button>
+
+          {equipoIndex !== null && (
+            <button
+              type="button"
+              onClick={() => {
+                resetearFormularioEquipo()
+              }}
+              style={{
+                flex: 1,
+                minWidth: '150px',
+                padding: isMobile ? '0.75rem' : '1rem',
+                backgroundColor: '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: isMobile ? '0.85rem' : '1rem',
+                fontWeight: '600',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ✕ Cancelar Edición
+            </button>
+          )}
+        </div>
+
         {/* COSTOS Y SERVICIOS */}
         <div style={{
           backgroundColor: 'white',
@@ -1613,6 +1798,80 @@ export default function NuevoServicioPage() {
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
+              marginBottom: '0.75rem',
+              fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+              paddingBottom: '0.75rem',
+              borderBottom: '1px solid #d1d5db'
+            }}>
+              <span style={{ fontWeight: '600' }}>📱 Equipos Agregados:</span>
+              <span style={{ fontWeight: '600', color: '#065f46' }}>{equipos.length}</span>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: '0.75rem',
+              fontSize: 'clamp(0.875rem, 2vw, 1rem)'
+            }}>
+              <span style={{ fontWeight: '500' }}>Costo Equipos:</span>
+              <span style={{ fontWeight: '600' }}>S/ {costoTotalEquipos.toFixed(2)}</span>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: '0.75rem',
+              fontSize: 'clamp(0.875rem, 2vw, 1rem)'
+            }}>
+              <span style={{ fontWeight: '500' }}>Servicios Adicionales:</span>
+              <span style={{ fontWeight: '600' }}>
+                S/ {serviciosAdicionales.reduce((sum, s) => sum + s.precio, 0).toFixed(2)}
+              </span>
+            </div>
+
+            <div style={{
+              borderTop: '2px solid #d1d5db',
+              paddingTop: '0.75rem',
+              marginTop: '0.75rem'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '0.75rem',
+                fontSize: 'clamp(1rem, 3vw, 1.25rem)'
+              }}>
+                <span style={{ fontWeight: '700' }}>TOTAL:</span>
+                <span style={{ fontWeight: '700', color: '#10b981' }}>
+                  S/ {(costoTotalEquipos + serviciosAdicionales.reduce((sum, s) => sum + s.precio, 0)).toFixed(2)}
+                </span>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '0.75rem',
+                fontSize: 'clamp(0.875rem, 2vw, 1rem)'
+              }}>
+                <span style={{ fontWeight: '600' }}>A Cuenta:</span>
+                <span style={{ fontWeight: '600', color: '#3b82f6' }}>
+                  S/ {parseFloat(aCuenta || '0').toFixed(2)}
+                </span>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: 'clamp(1rem, 3vw, 1.25rem)',
+                paddingTop: '0.75rem',
+                borderTop: '1px solid #d1d5db'
+              }}>
+                <span style={{ fontWeight: '700' }}>SALDO:</span>
+                <span style={{ fontWeight: '700', color: '#ef4444' }}>
+                  S/ {(costoTotalEquipos + serviciosAdicionales.reduce((sum, s) => sum + s.precio, 0) - parseFloat(aCuenta || '0')).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
               marginBottom: '0.75rem',
               fontSize: 'clamp(0.875rem, 2vw, 1rem)'
             }}>

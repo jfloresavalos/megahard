@@ -98,24 +98,13 @@ export async function POST(request: Request) {
       tecnicoId,
       sedeId,
       tipoServicioId, // ✅ Puede venir el tipo de servicio específico
-      tipoEquipo,
-      marcaEquipo,
-      descripcionEquipo,
-      dejoSinCargador,
-      dejoAccesorios,
-      esCotizacion,
-      problemasReportados,
-      otrosProblemas,
-      faltaPernos,
-      tieneAranaduras,
-      otrosDetalles,
-      costoServicio,
+      // ✅ AHORA RECIBIMOS ARRAY DE EQUIPOS EN LUGAR DE UN SOLO EQUIPO
+      equipos = [], // Array de equipos con sus datos individuales
       serviciosAdicionales,
       metodoPago,
       fechaEstimada,
       garantiaDias,
       aCuenta,
-      fotosEquipo, // ✅ AGREGADO
       // ✅ CAMPOS PARA SERVICIOS A DOMICILIO
       tipoServicioForm = 'TALLER', // 'TALLER' o 'DOMICILIO'
       direccionServicio,
@@ -123,8 +112,16 @@ export async function POST(request: Request) {
     } = body
 
     console.log('📝 Creando servicio técnico...', tipoServicioForm)
-    console.log('📸 Fotos recibidas:', fotosEquipo) // ✅ DEBUG
+    console.log('📦 Equipos recibidos:', equipos.length) // ✅ DEBUG
     console.log('📅 fechaEstimada recibida:', fechaEstimada, 'tipo:', typeof fechaEstimada) // ✅ DEBUG
+
+    // ✅ Validar que haya al menos un equipo
+    if (!equipos || equipos.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'Debe agregar al menos un equipo'
+      }, { status: 400 })
+    }
 
     // ✅ Determinar prefijo según tipo de servicio
     const prefijo = tipoServicioForm === 'DOMICILIO' ? 'SD' : 'ST'
@@ -218,42 +215,22 @@ export async function POST(request: Request) {
       }
     }
 
-    // Calcular costos
-    const costoServicioNum = parseFloat(costoServicio) || 0
-    let costoServiciosAdicionales = 0
+    // ✅ Calcular costos TOTALES de TODOS los equipos
+    let costoTotalEquipos = 0
+    equipos.forEach((equipo: any) => {
+      costoTotalEquipos += parseFloat(equipo.costoServicio) || 0
+    })
 
+    let costoServiciosAdicionales = 0
     if (serviciosAdicionales && Array.isArray(serviciosAdicionales)) {
       costoServiciosAdicionales = serviciosAdicionales.reduce((sum: number, servicio: any) => {
         return sum + (parseFloat(servicio.precio) || 0)
       }, 0)
     }
 
-    const costoTotalNum = costoServicioNum + costoServiciosAdicionales
+    const costoTotalNum = costoTotalEquipos + costoServiciosAdicionales
     const aCuentaNum = parseFloat(aCuenta) || 0
     const saldoNum = costoTotalNum - aCuentaNum
-
-    // Crear descripción del problema a partir de los IDs seleccionados
-    let descripcionProblemaFinal = ''
-    if (problemasReportados && problemasReportados.length > 0) {
-      const problemas = await prisma.problemaComun.findMany({
-        where: {
-          id: { in: problemasReportados }
-        }
-      })
-      descripcionProblemaFinal = problemas.map(p => p.nombre).join(', ')
-    }
-
-    if (otrosProblemas) {
-      if (descripcionProblemaFinal) {
-        descripcionProblemaFinal += '. ' + otrosProblemas
-      } else {
-        descripcionProblemaFinal = otrosProblemas
-      }
-    }
-
-    if (!descripcionProblemaFinal) {
-      descripcionProblemaFinal = 'Por diagnosticar'
-    }
 
     // ✅ Validar que se haya definido el cliente
     if (!clienteFinal) {
@@ -274,7 +251,28 @@ export async function POST(request: Request) {
     // ✅ Determinar estado inicial según tipo de servicio
     const estadoInicial = tipoServicioForm === 'DOMICILIO' ? 'EN_DOMICILIO' : 'RECEPCIONADO'
 
-    // Crear servicio
+    // ✅ Usar el PRIMER equipo como referencia para los campos de equipoTecnico
+    const primerEquipo = equipos[0]
+    let descripcionProblemaFinal = ''
+    
+    // Crear descripción del problema del primer equipo
+    if (primerEquipo.problemasSeleccionados && primerEquipo.problemasSeleccionados.length > 0) {
+      descripcionProblemaFinal = primerEquipo.problemasSeleccionados.map((p: any) => p.nombre).join(', ')
+    }
+    
+    if (primerEquipo.descripcionProblema) {
+      if (descripcionProblemaFinal) {
+        descripcionProblemaFinal += '. ' + primerEquipo.descripcionProblema
+      } else {
+        descripcionProblemaFinal = primerEquipo.descripcionProblema
+      }
+    }
+
+    if (!descripcionProblemaFinal) {
+      descripcionProblemaFinal = 'Por diagnosticar'
+    }
+
+    // Crear servicio con UN SOLO registro, pero MÚLTIPLES items/equipos
     const servicio = await prisma.servicioTecnico.create({
       data: {
         numeroServicio,
@@ -293,19 +291,20 @@ export async function POST(request: Request) {
         sede: {
           connect: { id: sedeId }
         },
-        tipoEquipo,
-        marcaModelo: marcaEquipo,
-        descripcionEquipo,
-        dejoSinCargador: dejoSinCargador || false,
-        dejoAccesorios: dejoAccesorios || false,
-        esCotizacion: esCotizacion || false,
+        // ✅ Usar datos del PRIMER equipo como referencia
+        tipoEquipo: primerEquipo.tipoEquipo,
+        marcaModelo: primerEquipo.marcaModelo,
+        descripcionEquipo: primerEquipo.descripcionEquipo,
+        dejoSinCargador: primerEquipo.dejoSinCargador || false,
+        dejoAccesorios: primerEquipo.dejoAccesorios || false,
+        esCotizacion: primerEquipo.esCotizacion || false,
         descripcionProblema: descripcionProblemaFinal,
-        problemasReportados: problemasReportados || [],
-        otrosProblemas,
-        faltaPernos: faltaPernos || false,
-        tieneAranaduras: tieneAranaduras || false,
-        otrosDetalles,
-        costoServicio: costoServicioNum,
+        problemasReportados: primerEquipo.problemasSeleccionados?.map((p: any) => p.id) || [],
+        otrosProblemas: primerEquipo.descripcionProblema || '',
+        faltaPernos: primerEquipo.faltaPernos || false,
+        tieneAranaduras: primerEquipo.tieneAranaduras || false,
+        otrosDetalles: primerEquipo.otrosDetalles || '',
+        costoServicio: costoTotalEquipos, // ✅ SUMA DE TODOS LOS EQUIPOS
         costoRepuestos: 0,
         total: costoTotalNum,
         aCuenta: aCuentaNum,
@@ -315,7 +314,7 @@ export async function POST(request: Request) {
         fechaRecepcion: new Date(),
         fechaEntregaEstimada: fechaEstimada ? new Date(fechaEstimada) : null,
         garantiaDias: parseInt(garantiaDias) || 30,
-        fotosEquipo: fotosEquipo || [], // ✅ CORREGIDO - USA EL PARÁMETRO
+        fotosEquipo: primerEquipo.fotos || [], // ✅ Fotos del primer equipo como referencia
         estado: estadoInicial,
         prioridad,
         // ✅ CAMPOS PARA SERVICIOS A DOMICILIO
@@ -331,12 +330,43 @@ export async function POST(request: Request) {
             username: true
           }
         },
-        sede: true
+        sede: true,
+        items: true
       }
     })
 
     console.log('✅ Servicio creado:', numeroServicio)
-    console.log('✅ Fotos guardadas:', servicio.fotosEquipo) // ✅ DEBUG
+
+    // ✅ AHORA CREAR UN SERVICIO ITEM POR CADA EQUIPO
+    console.log('📦 Creando', equipos.length, 'items de servicio...')
+    for (let i = 0; i < equipos.length; i++) {
+      const equipo = equipos[i]
+      
+      // Para este MVP, usamos una "línea" por equipo en lugar de vincular a un producto específico
+      // En el futuro se podría vincular a productos del catálogo
+      const item = await prisma.servicioItem.create({
+        data: {
+          servicioId: servicio.id,
+          productoId: '', // ✅ Podría linkear a producto, pero por ahora vacío
+          cantidad: 1,
+          precioUnit: equipo.costoServicio,
+          subtotal: equipo.costoServicio,
+          // ✅ Guardamos los datos del equipo en JSON para referencia
+          detalles: {
+            tipoEquipo: equipo.tipoEquipo,
+            marcaModelo: equipo.marcaModelo,
+            descripcionEquipo: equipo.descripcionEquipo,
+            problema: equipo.descripcionProblema,
+            problemasIds: equipo.problemasSeleccionados?.map((p: any) => p.id) || [],
+            fotos: equipo.fotos || []
+          }
+        }
+      })
+      
+      console.log(`  ✅ Item ${i + 1}: ${equipo.tipoEquipo} - S/ ${equipo.costoServicio}`)
+    }
+
+    console.log('✅ Servicio creado exitosamente:', numeroServicio)
 
     return NextResponse.json({ 
       success: true,
