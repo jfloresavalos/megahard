@@ -146,6 +146,7 @@ export default function NuevoServicioPage() {
   // ✅ MÚLTIPLES EQUIPOS
   const [equipos, setEquipos] = useState<Equipo[]>([])
   const [equipoIndex, setEquipoIndex] = useState<number | null>(null) // null = nuevo equipo, número = editando
+  const [modalEquipoAbierto, setModalEquipoAbierto] = useState(false) // Control del modal
 
   // Función para resetear formulario de equipo
   const resetearFormularioEquipo = () => {
@@ -167,7 +168,7 @@ export default function NuevoServicioPage() {
   }
 
   // Función para agregar/actualizar equipo
-  const agregarOActualizarEquipo = () => {
+  const agregarEquipo = () => {
     // Validaciones del equipo actual
     if (!tipoEquipo) {
       alert('Por favor seleccione el tipo de equipo')
@@ -187,7 +188,7 @@ export default function NuevoServicioPage() {
     const nuevoEquipo: Equipo = {
       id: equipoIndex !== null ? equipos[equipoIndex].id : `equipo-${Date.now()}`,
       tipoEquipo,
-      marcaModelo,
+      marcaModelo: marcaEquipo,
       descripcionEquipo,
       dejoSinCargador,
       dejoAccesorios,
@@ -232,6 +233,7 @@ export default function NuevoServicioPage() {
     setCostoServicio(equipo.costoServicio.toString())
     setPrevisualizaciones(equipo.fotos)
     setEquipoIndex(index)
+    setModalEquipoAbierto(true) // ✅ Abrir modal
   }
 
   // Función para eliminar equipo
@@ -887,7 +889,7 @@ export default function NuevoServicioPage() {
                   
                   <div style={{ marginBottom: '0.5rem' }}>
                     <p style={{ margin: '0.25rem 0', fontSize: '0.85rem' }}>
-                      <strong>Problema:</strong> {equipo.descripcionProblema}
+                      <strong>Problema:</strong> {equipo.otrosProblemas}
                     </p>
                     {equipo.problemasSeleccionados.length > 0 && (
                       <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
@@ -976,514 +978,37 @@ export default function NuevoServicioPage() {
           </div>
         )}
 
-        {/* EQUIPO EN RECEPCIÓN */}
-        <div style={{
-          backgroundColor: 'white',
-          padding: isMobile ? '0.75rem' : '1.5rem',
-          borderRadius: '8px',
-          marginBottom: isMobile ? '1rem' : '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-        }}>
-          <h2 style={{
-            fontSize: isMobile ? '0.95rem' : '1.25rem',
-            fontWeight: '600',
-            marginBottom: isMobile ? '0.75rem' : '1.5rem',
-            borderBottom: '2px solid #e5e7eb',
-            paddingBottom: '0.5rem'
-          }}>
-            {equipoIndex !== null ? '✏️ EDITAR EQUIPO' : '💻 AGREGAR EQUIPO'}
-          </h2>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '1rem',
-            marginBottom: '1rem'
-          }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
-                Tipo de Equipo *
-              </label>
-              <select
-                value={tipoEquipo}
-                onChange={(e) => setTipoEquipo(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '0.625rem' : '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: isMobile ? '0.85rem' : '0.875rem'
-                }}
-              >
-              <option value="LAPTOP">Laptop</option>
-              <option value="PC">PC / Computadora</option>
-              <option value="CELULAR">Celular</option>
-              <option value="TABLET">Tablet</option>
-              <option value="IMPRESORA">Impresora</option>
-              <option value="OTROS">Otros</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
-                Marca
-              </label>
-              <input
-                type="text"
-                value={marcaEquipo}
-                onChange={(e) => setMarcaEquipo(e.target.value)}
-                placeholder="Ej: HP, Lenovo, Epson"
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '0.625rem' : '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: isMobile ? '0.85rem' : '0.875rem'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
-                Modelo/Detalles
-              </label>
-              <input
-                type="text"
-                value={descripcionEquipo}
-                onChange={(e) => setDescripcionEquipo(e.target.value)}
-                placeholder="Ej: Pavilion 15"
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '0.625rem' : '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: isMobile ? '0.85rem' : '0.875rem'
-                }}
-              />
-            </div>
-          </div>
-
-          {/* ✅ CAMPO DE DIRECCIÓN (solo para servicios a domicilio) */}
-          {tipoServicioForm === 'DOMICILIO' && (
-            <div style={{ marginTop: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
-                📍 Dirección donde se realizará el servicio *
-              </label>
-              <textarea
-                value={direccionServicio}
-                onChange={(e) => setDireccionServicio(e.target.value)}
-                placeholder="Dirección completa, referencias, piso, oficina..."
-                rows={isMobile ? 2 : 2}
-                required={tipoServicioForm === 'DOMICILIO'}
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '0.5rem' : '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: isMobile ? '0.8rem' : '0.875rem',
-                  resize: 'vertical'
-                }}
-              />
-            </div>
-          )}
-
-          {/* Solo mostrar checkboxes de recepción para servicios de TALLER */}
-          {tipoServicioForm === 'TALLER' && (
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '1.5rem',
-              padding: '1rem',
-              backgroundColor: '#f9fafb',
-              borderRadius: '6px',
-              marginTop: '1rem'
-            }}>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                cursor: 'pointer',
-                fontSize: '0.875rem'
-              }}>
-                <input
-                  type="checkbox"
-                  checked={dejoSinCargador}
-                  onChange={(e) => setDejoSinCargador(e.target.checked)}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span>Sin cargador</span>
-            </label>
-
-            <label style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.5rem', 
-              cursor: 'pointer',
-              fontSize: '0.875rem'
-            }}>
-              <input
-                type="checkbox"
-                checked={dejoAccesorios}
-                onChange={(e) => setDejoAccesorios(e.target.checked)}
-                style={{ width: '18px', height: '18px' }}
-              />
-              <span>Dejó accesorios</span>
-            </label>
-
-            <label style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.5rem', 
-              cursor: 'pointer',
-              fontSize: '0.875rem'
-            }}>
-              <input
-                type="checkbox"
-                checked={esCotizacion}
-                onChange={(e) => setEsCotizacion(e.target.checked)}
-                style={{ width: '18px', height: '18px' }}
-              />
-              <span>Es cotización</span>
-            </label>
-
-            <label style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.5rem', 
-              cursor: 'pointer',
-              fontSize: '0.875rem'
-            }}>
-              <input
-                type="checkbox"
-                checked={faltaPernos}
-                onChange={(e) => setFaltaPernos(e.target.checked)}
-                style={{ width: '18px', height: '18px' }}
-              />
-              <span>Falta de pernos</span>
-            </label>
-
-            <label style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              cursor: 'pointer',
-              fontSize: '0.875rem'
-            }}>
-              <input
-                type="checkbox"
-                checked={tieneAranaduras}
-                onChange={(e) => setTieneAranaduras(e.target.checked)}
-                style={{ width: '18px', height: '18px' }}
-              />
-              <span>Tiene arañaduras</span>
-            </label>
-          </div>
-          )}
-
-          {/* Otros detalles (para ambos tipos de servicio) */}
-          <div style={{ marginTop: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
-              Otros detalles
-            </label>
-            <textarea
-              value={otrosDetalles}
-              onChange={(e) => setOtrosDetalles(e.target.value)}
-              rows={isMobile ? 2 : 3}
-              placeholder="Otros detalles del equipo..."
-              style={{
-                width: '100%',
-                padding: isMobile ? '0.5rem' : '0.75rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: isMobile ? '0.8rem' : '0.875rem',
-                resize: 'vertical'
-              }}
-            />
-          </div>
-        </div>
-
-        {/* FOTOS DEL EQUIPO */}
-        <div style={{
-          backgroundColor: 'white',
-          padding: isMobile ? '0.75rem' : '1.5rem',
-          borderRadius: '8px',
-          marginBottom: isMobile ? '1rem' : '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-        }}>
-          <h2 style={{
-            fontSize: isMobile ? '0.95rem' : '1.25rem',
-            fontWeight: '600',
-            marginBottom: isMobile ? '0.75rem' : '1.5rem',
-            borderBottom: '2px solid #e5e7eb',
-            paddingBottom: isMobile ? '0.35rem' : '0.5rem'
-          }}>
-            📸 FOTOS DEL EQUIPO (Opcional)
-          </h2>
-
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{
-              display: 'inline-block',
-              padding: '0.75rem 1.5rem',
-              backgroundColor: fotos.length >= 5 ? '#9ca3af' : '#3b82f6',
-              color: 'white',
-              borderRadius: '6px',
-              cursor: fotos.length >= 5 ? 'not-allowed' : 'pointer',
-              fontSize: '0.95rem',
-              fontWeight: '600'
-            }}>
-              📷 Seleccionar Fotos ({fotos.length}/5)
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleSeleccionarFotos}
-                disabled={fotos.length >= 5}
-                style={{ display: 'none' }}
-              />
-            </label>
-            <div style={{
-              marginTop: '0.5rem',
-              fontSize: '0.875rem',
-              color: '#6b7280'
-            }}>
-              Máximo 5 fotos • Máximo 5MB por foto
-            </div>
-          </div>
-
-          {previsualizaciones.length > 0 && (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fill, minmax(150px, 1fr))',
-              gap: '1rem'
-            }}>
-              {previsualizaciones.map((preview, index) => (
-                <div
-                  key={index}
-                  style={{
-                    position: 'relative',
-                    paddingTop: '100%',
-                    backgroundColor: '#f3f4f6',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    border: '2px solid #e5e7eb'
-                  }}
-                >
-                  <img
-                    src={preview}
-                    alt={`Foto ${index + 1}`}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover'
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => eliminarFoto(index)}
-                    style={{
-                      position: 'absolute',
-                      top: '0.5rem',
-                      right: '0.5rem',
-                      padding: '0.25rem 0.5rem',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600'
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Continúa en el siguiente mensaje... */}
-        {/* PROBLEMAS ENCONTRADOS */}
-        <div style={{
-          backgroundColor: 'white',
-          padding: isMobile ? '0.75rem' : '1.5rem',
-          borderRadius: '8px',
-          marginBottom: isMobile ? '1rem' : '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-        }}>
+        {/* BOTÓN AGREGAR NUEVO EQUIPO - ABRE MODAL */}
+        {modalEquipoAbierto === false && (
           <div style={{
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: isMobile ? '0.75rem' : '1.5rem',
-            borderBottom: '2px solid #e5e7eb',
-            paddingBottom: isMobile ? '0.35rem' : '0.5rem',
-            flexWrap: 'wrap',
-            gap: isMobile ? '0.5rem' : '1rem'
+            justifyContent: 'center',
+            marginBottom: isMobile ? '1rem' : '1.5rem'
           }}>
-            <h2 style={{
-              fontSize: isMobile ? '0.95rem' : '1.25rem',
-              fontWeight: '600',
-              margin: 0
-            }}>
-              🔧 PROBLEMAS ENCONTRADOS
-            </h2>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => setModalAgregarProblema(true)}
-                style={{
-                  padding: isMobile ? '0.4rem 0.75rem' : '0.5rem 1rem',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: isMobile ? '0.8rem' : '0.875rem',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                + Agregar
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalNuevoProblema(true)}
-                style={{
-                  padding: isMobile ? '0.4rem 0.75rem' : '0.5rem 1rem',
-                  backgroundColor: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: isMobile ? '0.8rem' : '0.875rem',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                + Nuevo
-              </button>
-            </div>
-          </div>
-
-          {/* Problemas seleccionados */}
-          {problemasSeleccionados.length > 0 && (
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '0.5rem',
-              marginBottom: '1rem'
-            }}>
-              {problemasSeleccionados.map(problema => (
-                <div
-                  key={problema.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.5rem 1rem',
-                    backgroundColor: '#dbeafe',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem'
-                  }}
-                >
-                  <span>{problema.nombre}</span>
-                  <button
-                    type="button"
-                    onClick={() => eliminarProblema(problema.id)}
-                    style={{
-                      padding: '0.25rem 0.5rem',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '0.75rem'
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
-              Descripción adicional
-            </label>
-            <textarea
-              value={descripcionProblema}
-              onChange={(e) => setDescripcionProblema(e.target.value)}
-              rows={isMobile ? 2 : 3}
-              placeholder="Describe detalles adicionales del problema..."
-              style={{
-                width: '100%',
-                padding: isMobile ? '0.5rem' : '0.75rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: isMobile ? '0.8rem' : '0.875rem',
-                resize: 'vertical'
-              }}
-            />
-          </div>
-        </div>
-
-        {/* BOTÓN AGREGAR/ACTUALIZAR EQUIPO */}
-        <div style={{
-          display: 'flex',
-          gap: '1rem',
-          marginBottom: isMobile ? '1rem' : '1.5rem',
-          flexWrap: 'wrap'
-        }}>
-          <button
-            type="button"
-            onClick={agregarEquipo}
-            style={{
-              flex: 1,
-              minWidth: '150px',
-              padding: isMobile ? '0.75rem' : '1rem',
-              backgroundColor: '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: isMobile ? '0.85rem' : '1rem',
-              fontWeight: '600',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {equipoIndex !== null ? '✏️ Actualizar Equipo' : '➕ Agregar Equipo'}
-          </button>
-
-          {equipoIndex !== null && (
             <button
               type="button"
               onClick={() => {
                 resetearFormularioEquipo()
+                setModalEquipoAbierto(true)
               }}
               style={{
-                flex: 1,
-                minWidth: '150px',
-                padding: isMobile ? '0.75rem' : '1rem',
-                backgroundColor: '#6b7280',
+                padding: isMobile ? '0.75rem 1.5rem' : '1rem 2rem',
+                backgroundColor: '#10b981',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: isMobile ? '0.85rem' : '1rem',
+                fontSize: isMobile ? '0.95rem' : '1.1rem',
                 fontWeight: '600',
                 whiteSpace: 'nowrap'
               }}
             >
-              ✕ Cancelar Edición
+              ➕ Agregar Nuevo Equipo
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* COSTOS Y SERVICIOS */}
+        {/* SERVICIOS ADICIONALES */}
         <div style={{
           backgroundColor: 'white',
           padding: isMobile ? '0.75rem' : '1.5rem',
@@ -1498,55 +1023,8 @@ export default function NuevoServicioPage() {
             borderBottom: '2px solid #e5e7eb',
             paddingBottom: isMobile ? '0.35rem' : '0.5rem'
           }}>
-            💰 COSTOS Y SERVICIOS
+            🛠️ SERVICIOS ADICIONALES (Opcional)
           </h2>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '1rem',
-            marginBottom: '1.5rem'
-          }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
-                Costo del Servicio *
-              </label>
-              <input
-                type="number"
-                value={costoServicio}
-                onChange={(e) => setCostoServicio(e.target.value)}
-                required
-                min="0"
-                step="0.01"
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '0.625rem' : '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: isMobile ? '0.85rem' : '0.875rem'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
-                Garantía (días)
-              </label>
-              <input
-                type="number"
-                value={garantiaDias}
-                onChange={(e) => setGarantiaDias(e.target.value)}
-                min="0"
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '0.625rem' : '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: isMobile ? '0.85rem' : '0.875rem'
-                }}
-              />
-            </div>
-          </div>
 
           <div style={{
             display: 'flex',
@@ -1556,9 +1034,7 @@ export default function NuevoServicioPage() {
             flexWrap: 'wrap',
             gap: isMobile ? '0.5rem' : '1rem'
           }}>
-            <h3 style={{ fontSize: isMobile ? '0.9rem' : '1.1rem', fontWeight: '600', margin: 0 }}>
-              Servicios Adicionales
-            </h3>
+            <span></span>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button
                 type="button"
@@ -1674,7 +1150,7 @@ export default function NuevoServicioPage() {
             💰 COSTOS Y ADELANTO
           </h2>
 
-          {/* ADELANTO DEL CLIENTE */}
+          {/* ADELANTO DEL CLIENTE - OPCIONAL */}
           <div style={{
             backgroundColor: '#eff6ff',
             padding: isMobile ? '0.75rem' : '1.25rem',
@@ -1682,65 +1158,88 @@ export default function NuevoServicioPage() {
             marginBottom: isMobile ? '1rem' : '1.5rem',
             border: '2px solid #3b82f6'
           }}>
-            <h3 style={{
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              cursor: 'pointer',
+              marginBottom: isMobile ? '0.75rem' : '1rem',
               fontSize: isMobile ? '0.9rem' : '1rem',
               fontWeight: '600',
-              marginBottom: isMobile ? '0.75rem' : '1rem',
               color: '#1e40af'
             }}>
-              💳 Adelanto del Cliente
-            </h3>
+              <input
+                type="checkbox"
+                checked={parseFloat(aCuenta) > 0}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setACuenta('0')
+                  } else {
+                    setACuenta('0')
+                  }
+                }}
+                style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+              />
+              <span>💳 ¿Recibir Adelanto del Cliente?</span>
+            </label>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '1rem'
-            }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
-                  Método de Pago del Adelanto
-                </label>
-                <select
-                  value={metodoPago}
-                  onChange={(e) => setMetodoPago(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: isMobile ? '0.5rem' : '0.75rem',
-                    border: '1px solid #3b82f6',
-                    borderRadius: '6px',
-                    fontSize: isMobile ? '0.8rem' : '0.875rem',
-                    backgroundColor: 'white'
-                  }}
-                >
-                  {metodosPago.map((metodo) => (
-                    <option key={metodo.id} value={metodo.nombre}>
-                      {metodo.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {parseFloat(aCuenta) > 0 || metodoPago ? (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '1rem'
+              }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
+                    Método de Pago del Adelanto (Opcional)
+                  </label>
+                  <select
+                    value={metodoPago}
+                    onChange={(e) => setMetodoPago(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: isMobile ? '0.5rem' : '0.75rem',
+                      border: '1px solid #3b82f6',
+                      borderRadius: '6px',
+                      fontSize: isMobile ? '0.8rem' : '0.875rem',
+                      backgroundColor: 'white'
+                    }}
+                  >
+                    <option value="">-- Seleccionar --</option>
+                    {metodosPago.map((metodo) => (
+                      <option key={metodo.id} value={metodo.nombre}>
+                        {metodo.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
-                  Monto del Adelanto (A Cuenta)
-                </label>
-                <input
-                  type="number"
-                  value={aCuenta}
-                  onChange={(e) => setACuenta(e.target.value)}
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  style={{
-                    width: '100%',
-                    padding: isMobile ? '0.5rem' : '0.75rem',
-                    border: '1px solid #3b82f6',
-                    borderRadius: '6px',
-                    fontSize: isMobile ? '0.8rem' : '0.875rem'
-                  }}
-                />
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: isMobile ? '0.8rem' : '0.875rem' }}>
+                    Monto del Adelanto (Opcional)
+                  </label>
+                  <input
+                    type="number"
+                    value={aCuenta}
+                    onChange={(e) => setACuenta(e.target.value)}
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: isMobile ? '0.5rem' : '0.75rem',
+                      border: '1px solid #3b82f6',
+                      borderRadius: '6px',
+                      fontSize: isMobile ? '0.8rem' : '0.875rem'
+                    }}
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>
+                ✓ No se registrará adelanto por el momento
+              </p>
+            )}
           </div>
 
           {/* FECHA ESTIMADA Y GARANTÍA */}
@@ -1872,68 +1371,6 @@ export default function NuevoServicioPage() {
               </div>
             </div>
           </div>
-              marginBottom: '0.75rem',
-              fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-            }}>
-              <span style={{ fontWeight: '500' }}>Costo del Servicio:</span>
-              <span style={{ fontWeight: '600' }}>S/ {parseFloat(costoServicio || '0').toFixed(2)}</span>
-            </div>
-
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginBottom: '0.75rem',
-              fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-            }}>
-              <span style={{ fontWeight: '500' }}>Servicios Adicionales:</span>
-              <span style={{ fontWeight: '600' }}>
-                S/ {serviciosAdicionales.reduce((sum, s) => sum + s.precio, 0).toFixed(2)}
-              </span>
-            </div>
-
-            <div style={{
-              borderTop: '2px solid #d1d5db',
-              paddingTop: '0.75rem',
-              marginTop: '0.75rem'
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginBottom: '0.75rem',
-                fontSize: 'clamp(1rem, 3vw, 1.25rem)'
-              }}>
-                <span style={{ fontWeight: '700' }}>TOTAL:</span>
-                <span style={{ fontWeight: '700', color: '#10b981' }}>
-                  S/ {calcularTotal().toFixed(2)}
-                </span>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginBottom: '0.75rem',
-                fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-              }}>
-                <span style={{ fontWeight: '600' }}>A Cuenta:</span>
-                <span style={{ fontWeight: '600', color: '#3b82f6' }}>
-                  S/ {parseFloat(aCuenta || '0').toFixed(2)}
-                </span>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: 'clamp(1rem, 3vw, 1.25rem)',
-                paddingTop: '0.75rem',
-                borderTop: '1px solid #d1d5db'
-              }}>
-                <span style={{ fontWeight: '700' }}>SALDO:</span>
-                <span style={{ fontWeight: '700', color: '#ef4444' }}>
-                  S/ {calcularSaldo().toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* BOTONES DE ACCIÓN */}
@@ -1982,42 +1419,466 @@ export default function NuevoServicioPage() {
         </div>
       </form>
 
-      {/* MODAL: AGREGAR PROBLEMA */}
-<ModalAgregarProblema
-  isOpen={modalAgregarProblema}
-  onClose={() => setModalAgregarProblema(false)}
-  problemas={problemasDisponibles}
-  onSeleccionar={agregarProblema}
-  onCrearNuevo={() => setModalNuevoProblema(true)}
-/>
+      {/* MODAL: EDITAR/AGREGAR EQUIPO */}
+<Modal
+  isOpen={modalEquipoAbierto}
+  onClose={() => {
+    setModalEquipoAbierto(false)
+    resetearFormularioEquipo()
+  }}
+  title={equipoIndex !== null ? '✏️ Editar Equipo' : '➕ Agregar Nuevo Equipo'}
+>
+  <div style={{ maxHeight: '80vh', overflowY: 'auto', paddingRight: '1rem' }}>
+    {/* CONTENIDO DEL MODAL - FORMULARIO DE EQUIPO */}
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
+      gap: '1rem',
+      marginBottom: '1rem'
+    }}>
+      <div>
+        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+          Tipo de Equipo *
+        </label>
+        <select
+          value={tipoEquipo}
+          onChange={(e) => setTipoEquipo(e.target.value)}
+          required
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            fontSize: '0.875rem'
+          }}
+        >
+          <option value="">Seleccionar...</option>
+          <option value="LAPTOP">Laptop</option>
+          <option value="PC">PC / Computadora</option>
+          <option value="CELULAR">Celular</option>
+          <option value="TABLET">Tablet</option>
+          <option value="IMPRESORA">Impresora</option>
+          <option value="OTROS">Otros</option>
+        </select>
+      </div>
 
-      {/* MODAL: NUEVO PROBLEMA */}
+      <div>
+        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+          Marca
+        </label>
+        <input
+          type="text"
+          value={marcaEquipo}
+          onChange={(e) => setMarcaEquipo(e.target.value)}
+          placeholder="Ej: HP, Lenovo"
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            fontSize: '0.875rem'
+          }}
+        />
+      </div>
+
+      <div>
+        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+          Modelo/Detalles
+        </label>
+        <input
+          type="text"
+          value={descripcionEquipo}
+          onChange={(e) => setDescripcionEquipo(e.target.value)}
+          placeholder="Ej: Pavilion 15"
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            fontSize: '0.875rem'
+          }}
+        />
+      </div>
+    </div>
+
+    {/* CHECKBOXES DE RECEPCIÓN */}
+    {tipoServicioForm === 'TALLER' && (
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '1rem',
+        padding: '1rem',
+        backgroundColor: '#f9fafb',
+        borderRadius: '6px',
+        marginBottom: '1rem'
+      }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+          <input
+            type="checkbox"
+            checked={dejoSinCargador}
+            onChange={(e) => setDejoSinCargador(e.target.checked)}
+            style={{ width: '18px', height: '18px' }}
+          />
+          <span>Sin cargador</span>
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+          <input
+            type="checkbox"
+            checked={dejoAccesorios}
+            onChange={(e) => setDejoAccesorios(e.target.checked)}
+            style={{ width: '18px', height: '18px' }}
+          />
+          <span>Dejó accesorios</span>
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+          <input
+            type="checkbox"
+            checked={esCotizacion}
+            onChange={(e) => setEsCotizacion(e.target.checked)}
+            style={{ width: '18px', height: '18px' }}
+          />
+          <span>Es cotización</span>
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+          <input
+            type="checkbox"
+            checked={faltaPernos}
+            onChange={(e) => setFaltaPernos(e.target.checked)}
+            style={{ width: '18px', height: '18px' }}
+          />
+          <span>Falta de pernos</span>
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+          <input
+            type="checkbox"
+            checked={tieneAranaduras}
+            onChange={(e) => setTieneAranaduras(e.target.checked)}
+            style={{ width: '18px', height: '18px' }}
+          />
+          <span>Tiene arañaduras</span>
+        </label>
+      </div>
+    )}
+
+    {/* OTROS DETALLES */}
+    <div style={{ marginBottom: '1rem' }}>
+      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+        Otros detalles
+      </label>
+      <textarea
+        value={otrosDetalles}
+        onChange={(e) => setOtrosDetalles(e.target.value)}
+        rows={2}
+        placeholder="Otros detalles del equipo..."
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          border: '1px solid #d1d5db',
+          borderRadius: '6px',
+          fontSize: '0.875rem',
+          resize: 'vertical'
+        }}
+      />
+    </div>
+
+    {/* PROBLEMAS */}
+    <div style={{
+      padding: '1rem',
+      backgroundColor: '#f0fdf4',
+      borderRadius: '6px',
+      marginBottom: '1rem',
+      border: '1px solid #d1d5db'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+        <strong style={{ fontSize: '0.9rem' }}>🔧 Problemas</strong>
+        <div style={{ display: 'flex', gap: '0.25rem' }}>
+          <button
+            type="button"
+            onClick={() => setModalAgregarProblema(true)}
+            style={{
+              padding: '0.3rem 0.6rem',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.75rem'
+            }}
+          >
+            + Agregar
+          </button>
+          <button
+            type="button"
+            onClick={() => setModalNuevoProblema(true)}
+            style={{
+              padding: '0.3rem 0.6rem',
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.75rem'
+            }}
+          >
+            + Nuevo
+          </button>
+        </div>
+      </div>
+
+      {problemasSeleccionados.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginBottom: '0.75rem' }}>
+          {problemasSeleccionados.map(p => (
+            <span
+              key={p.id}
+              style={{
+                fontSize: '0.75rem',
+                backgroundColor: '#dbeafe',
+                color: '#1e40af',
+                padding: '0.2rem 0.5rem',
+                borderRadius: '3px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem'
+              }}
+            >
+              {p.nombre}
+              <button
+                type="button"
+                onClick={() => eliminarProblema(p.id)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#1e40af',
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontSize: '0.75rem'
+                }}
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div>
+        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.75rem' }}>
+          Descripción adicional
+        </label>
+        <textarea
+          value={descripcionProblema}
+          onChange={(e) => setDescripcionProblema(e.target.value)}
+          rows={2}
+          placeholder="Detalles adicionales..."
+          style={{
+            width: '100%',
+            padding: '0.5rem',
+            border: '1px solid #d1d5db',
+            borderRadius: '4px',
+            fontSize: '0.75rem',
+            resize: 'vertical'
+          }}
+        />
+      </div>
+    </div>
+
+    {/* COSTO */}
+    <div style={{ marginBottom: '1rem' }}>
+      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
+        Costo del Servicio *
+      </label>
+      <input
+        type="number"
+        value={costoServicio}
+        onChange={(e) => setCostoServicio(e.target.value)}
+        required
+        min="0"
+        step="0.01"
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          border: '1px solid #d1d5db',
+          borderRadius: '6px',
+          fontSize: '0.875rem'
+        }}
+      />
+    </div>
+
+    {/* BOTONES */}
+    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+      <button
+        type="button"
+        onClick={() => {
+          setModalEquipoAbierto(false)
+          resetearFormularioEquipo()
+        }}
+        style={{
+          padding: '0.75rem 1.5rem',
+          backgroundColor: '#6b7280',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontWeight: '600'
+        }}
+      >
+        Cancelar
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          agregarEquipo()
+          setModalEquipoAbierto(false)
+        }}
+        style={{
+          padding: '0.75rem 1.5rem',
+          backgroundColor: '#10b981',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontWeight: '600'
+        }}
+      >
+        {equipoIndex !== null ? '✏️ Actualizar' : '➕ Agregar'}
+      </button>
+    </div>
+
+    {/* MODALES DENTRO DEL MODAL DE EQUIPO */}
+    
+    {/* MODAL: AGREGAR PROBLEMA */}
+    <ModalAgregarProblema
+      isOpen={modalAgregarProblema}
+      onClose={() => setModalAgregarProblema(false)}
+      problemas={problemasDisponibles}
+      onSeleccionar={agregarProblema}
+      onCrearNuevo={() => {
+        setModalAgregarProblema(false)
+        setModalNuevoProblema(true)
+      }}
+    />
+
+    {/* MODAL: NUEVO PROBLEMA */}
+    <Modal
+      isOpen={modalNuevoProblema}
+      onClose={() => setModalNuevoProblema(false)}
+      title="Crear Nuevo Problema"
+    >
+      <div>
+        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+          Nombre del problema *
+        </label>
+        <input
+          type="text"
+          value={nuevoProblema}
+          onChange={(e) => setNuevoProblema(e.target.value)}
+          placeholder="Ej: Problema de batería"
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            marginBottom: '1rem'
+          }}
+        />
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={() => setModalNuevoProblema(false)}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: '#6b7280',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={crearNuevoProblema}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            Crear y Agregar
+          </button>
+        </div>
+      </div>
+    </Modal>
+  </div>
+</Modal>
+
+      {/* MODAL: AGREGAR SERVICIO - FUERA DEL MODAL DE EQUIPO */}
+      <ModalAgregarServicio
+        isOpen={modalAgregarServicio}
+        onClose={() => setModalAgregarServicio(false)}
+        servicios={serviciosDisponibles}
+        onSeleccionar={agregarServicioAdicional}
+        onCrearNuevo={() => {
+          setModalAgregarServicio(false)
+          setModalNuevoServicio(true)
+        }}
+      />
+
+      {/* MODAL: NUEVO SERVICIO - FUERA DEL MODAL DE EQUIPO */}
       <Modal
-        isOpen={modalNuevoProblema}
-        onClose={() => setModalNuevoProblema(false)}
-        title="Crear Nuevo Problema"
+        isOpen={modalNuevoServicio}
+        onClose={() => setModalNuevoServicio(false)}
+        title="Crear Nuevo Servicio Adicional"
       >
         <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-            Nombre del problema *
-          </label>
-          <input
-            type="text"
-            value={nuevoProblema}
-            onChange={(e) => setNuevoProblema(e.target.value)}
-            placeholder="Ej: Problema de batería"
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              marginBottom: '1rem'
-            }}
-          />
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Nombre del servicio *
+            </label>
+            <input
+              type="text"
+              value={nuevoServicioNombre}
+              onChange={(e) => setNuevoServicioNombre(e.target.value)}
+              placeholder="Ej: Cambio de batería"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px'
+              }}
+            />
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Precio sugerido *
+            </label>
+            <input
+              type="number"
+              value={nuevoServicioPrecio}
+              onChange={(e) => setNuevoServicioPrecio(e.target.value)}
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px'
+              }}
+            />
+          </div>
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
             <button
               type="button"
-              onClick={() => setModalNuevoProblema(false)}
+              onClick={() => setModalNuevoServicio(false)}
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: '#6b7280',
@@ -2031,7 +1892,7 @@ export default function NuevoServicioPage() {
             </button>
             <button
               type="button"
-              onClick={crearNuevoProblema}
+              onClick={crearNuevoServicioAdicional}
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: '#10b981',
@@ -2046,91 +1907,6 @@ export default function NuevoServicioPage() {
           </div>
         </div>
       </Modal>
-
-{/* MODAL: AGREGAR SERVICIO */}
-<ModalAgregarServicio
-  isOpen={modalAgregarServicio}
-  onClose={() => setModalAgregarServicio(false)}
-  servicios={serviciosDisponibles}
-  onSeleccionar={agregarServicioAdicional}
-  onCrearNuevo={() => setModalNuevoServicio(true)}
-/>
-
-   {/* MODAL: NUEVO SERVICIO */}
-<Modal
-  isOpen={modalNuevoServicio}
-  onClose={() => setModalNuevoServicio(false)}
-  title="Crear Nuevo Servicio Adicional"
->
-  <div>
-    <div style={{ marginBottom: '1rem' }}>
-      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-        Nombre del servicio *
-      </label>
-      <input
-        type="text"
-        value={nuevoServicioNombre}
-        onChange={(e) => setNuevoServicioNombre(e.target.value)}
-        placeholder="Ej: Cambio de batería"
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          border: '1px solid #d1d5db',
-          borderRadius: '6px'
-        }}
-      />
-    </div>
-    <div style={{ marginBottom: '1rem' }}>
-      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-        Precio sugerido *
-      </label>
-      <input
-        type="number"
-        value={nuevoServicioPrecio}
-        onChange={(e) => setNuevoServicioPrecio(e.target.value)}
-        min="0"
-        step="0.01"
-        placeholder="0.00"
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          border: '1px solid #d1d5db',
-          borderRadius: '6px'
-        }}
-      />
-    </div>
-    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-      <button
-        type="button"
-        onClick={() => setModalNuevoServicio(false)}
-        style={{
-          padding: '0.75rem 1.5rem',
-          backgroundColor: '#6b7280',
-          color: 'white',
-          border: 'none',
-          borderRadius: '6px',
-          cursor: 'pointer'
-        }}
-      >
-        Cancelar
-      </button>
-      <button
-        type="button"
-        onClick={crearNuevoServicioAdicional}
-        style={{
-          padding: '0.75rem 1.5rem',
-          backgroundColor: '#10b981',
-          color: 'white',
-          border: 'none',
-          borderRadius: '6px',
-          cursor: 'pointer'
-        }}
-      >
-        Crear y Agregar
-      </button>
-    </div>
-  </div>
-</Modal>
     </div>
   )
 }

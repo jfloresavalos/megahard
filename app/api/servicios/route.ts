@@ -350,16 +350,7 @@ export async function POST(request: Request) {
           productoId: '', // ✅ Podría linkear a producto, pero por ahora vacío
           cantidad: 1,
           precioUnit: equipo.costoServicio,
-          subtotal: equipo.costoServicio,
-          // ✅ Guardamos los datos del equipo en JSON para referencia
-          detalles: {
-            tipoEquipo: equipo.tipoEquipo,
-            marcaModelo: equipo.marcaModelo,
-            descripcionEquipo: equipo.descripcionEquipo,
-            problema: equipo.descripcionProblema,
-            problemasIds: equipo.problemasSeleccionados?.map((p: any) => p.id) || [],
-            fotos: equipo.fotos || []
-          }
+          subtotal: equipo.costoServicio
         }
       })
       
