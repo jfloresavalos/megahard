@@ -48,6 +48,7 @@ interface ServicioComprobante {
   garantiaDias: number
   metodoPago?: string | null
   metodoPagoSaldo?: string | null
+  serviciosAdicionales?: any // ✅ Para parsear múltiples equipos
 }
 
 const formatFecha = (fecha: string) => {
@@ -64,131 +65,142 @@ export const generarComprobantePDF = (servicio: ServicioComprobante) => {
     const doc = new jsPDF('p', 'mm', 'a4')
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
-    let yPos = 15
+    let yPos = 10
 
-    // ==================== ENCABEZADO SIMPLE ====================
-    doc.setFontSize(18)
+    // ==================== PARSEAR EQUIPOS ====================
+    let equipos: any[] = [];
+
+    if (servicio.serviciosAdicionales) {
+      try {
+        let parsed: any;
+        if (typeof servicio.serviciosAdicionales === 'string') {
+          parsed = JSON.parse(servicio.serviciosAdicionales);
+        } else if (typeof servicio.serviciosAdicionales === 'object') {
+          parsed = servicio.serviciosAdicionales;
+        }
+
+        if (parsed && parsed.equipos && Array.isArray(parsed.equipos)) {
+          equipos = parsed.equipos;
+        }
+      } catch (error) {
+        console.error('❌ Error parseando serviciosAdicionales:', error);
+      }
+    }
+
+    // Fallback: si no hay equipos, usar los datos legacy del servicio principal
+    if (equipos.length === 0) {
+      equipos = [{
+        tipoEquipo: servicio.tipoEquipo,
+        marcaModelo: servicio.marcaModelo,
+        descripcionEquipo: servicio.descripcionEquipo,
+        diagnostico: servicio.diagnostico,
+        solucion: servicio.solucion,
+        costoServicio: servicio.costoServicio
+      }];
+    }
+
+    // ==================== ENCABEZADO COMPACTO ====================
+    doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
     doc.text('COMPROBANTE DE ENTREGA', pageWidth / 2, yPos, { align: 'center' })
 
-    yPos += 7
-    doc.setFontSize(11)
+    yPos += 5
+    doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
     doc.text(servicio.sede.nombre, pageWidth / 2, yPos, { align: 'center' })
 
-    yPos += 5
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.text(servicio.sede.direccion, pageWidth / 2, yPos, { align: 'center' })
-
     yPos += 4
-    doc.text(`Tel: ${servicio.sede.telefono}`, pageWidth / 2, yPos, { align: 'center' })
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`${servicio.sede.direccion} - Tel: ${servicio.sede.telefono}`, pageWidth / 2, yPos, { align: 'center' })
 
     yPos += 2
     doc.setDrawColor(0, 0, 0)
-    doc.setLineWidth(0.5)
-    doc.line(20, yPos, pageWidth - 20, yPos)
-    yPos += 8
+    doc.setLineWidth(0.3)
+    doc.line(15, yPos, pageWidth - 15, yPos)
+    yPos += 5
 
     // ==================== INFO DEL SERVICIO ====================
-    doc.setFontSize(10)
+    doc.setFontSize(8)
     doc.setFont('helvetica', 'bold')
-    doc.text(`N° Servicio: ${servicio.numeroServicio}`, 20, yPos)
-    doc.text(`Fecha Entrega: ${formatFecha(servicio.fechaEntregaReal)}`, pageWidth - 20, yPos, { align: 'right' })
+    doc.text(`N° ${servicio.numeroServicio}`, 15, yPos)
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Entrega: ${formatFecha(servicio.fechaEntregaReal)}`, pageWidth / 2, yPos, { align: 'center' })
+    doc.text(`Garantía: ${servicio.garantiaDias}d`, pageWidth - 15, yPos, { align: 'right' })
     yPos += 5
-    doc.setFont('helvetica', 'normal')
-    doc.text(`Recepción: ${formatFecha(servicio.fechaRecepcion)}`, 20, yPos)
-    doc.text(`Garantía: ${servicio.garantiaDias} días`, pageWidth - 20, yPos, { align: 'right' })
-    yPos += 8
 
-    // ==================== SECCIÓN CLIENTE Y EQUIPO (DOS COLUMNAS) ====================
-    const col1X = 20
-    const col2X = pageWidth / 2 + 5
-    const sectionStartY = yPos
-
-    // COLUMNA 1: DATOS DEL CLIENTE
-    doc.setFontSize(10)
+    // ==================== DATOS DEL CLIENTE ====================
+    doc.setFontSize(8)
     doc.setFont('helvetica', 'bold')
-    doc.text('DATOS DEL CLIENTE', col1X, yPos)
+    doc.text('CLIENTE', 15, yPos)
 
-    yPos += 6
-    doc.setFontSize(9)
+    yPos += 4
+    doc.setFontSize(7)
     doc.setFont('helvetica', 'normal')
-    doc.text(`Nombre: ${servicio.clienteNombre}`, col1X, yPos)
-    yPos += 4
-    doc.text(`DNI: ${servicio.clienteDni}`, col1X, yPos)
-    yPos += 4
-    doc.text(`Celular: ${servicio.clienteCelular}`, col1X, yPos)
+    doc.text(`${servicio.clienteNombre} - DNI: ${servicio.clienteDni} - Tel: ${servicio.clienteCelular}`, 15, yPos)
 
-    // COLUMNA 2: DATOS DEL EQUIPO
-    yPos = sectionStartY
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'bold')
-    doc.text(servicio.tipoServicioTipo === 'DOMICILIO' ? 'EQUIPO REPARADO (DOMICILIO)' : 'EQUIPO REPARADO', col2X, yPos)
-
-    yPos += 6
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.text(`Tipo: ${servicio.tipoEquipo}`, col2X, yPos)
-    yPos += 4
-    doc.text(`Modelo: ${servicio.marcaModelo}`, col2X, yPos)
-    yPos += 4
-    const descripcion = servicio.descripcionEquipo || 'N/A'
-    const descripcionCorta = descripcion.length > 25 ? descripcion.substring(0, 25) + '...' : descripcion
-    doc.text(`Desc: ${descripcionCorta}`, col2X, yPos)
-
-    yPos = sectionStartY + 18
+    yPos += 5
 
     // ✅ DIRECCIÓN DEL SERVICIO (solo para DOMICILIO)
     if (servicio.tipoServicioTipo === 'DOMICILIO' && servicio.direccionServicio) {
-      doc.setFontSize(10)
+      doc.setFontSize(7)
       doc.setFont('helvetica', 'bold')
-      doc.text('📍 DIRECCIÓN DEL SERVICIO', 20, yPos)
-      yPos += 6
-
-      doc.setFontSize(9)
+      doc.text('Dirección:', 15, yPos)
       doc.setFont('helvetica', 'normal')
-      const direccionLines = doc.splitTextToSize(servicio.direccionServicio, pageWidth - 40)
-      doc.text(direccionLines, 20, yPos)
-      yPos += direccionLines.length * 4 + 6
+      const direccionLines = doc.splitTextToSize(servicio.direccionServicio, pageWidth - 35)
+      doc.text(direccionLines[0], 35, yPos)
+      yPos += 4
     }
 
-    // ==================== DIAGNÓSTICO Y SOLUCIÓN ====================
-    doc.setFontSize(10)
+    // ==================== EQUIPOS REPARADOS ====================
+    doc.setFontSize(8)
     doc.setFont('helvetica', 'bold')
-    doc.text('DIAGNÓSTICO Y SOLUCIÓN', 20, yPos)
-    yPos += 6
-
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Diagnóstico:', 20, yPos)
+    doc.text('EQUIPOS REPARADOS', 15, yPos)
     yPos += 4
-    doc.setFont('helvetica', 'normal')
-    if (servicio.diagnostico) {
-      const diagnosticoLines = doc.splitTextToSize(servicio.diagnostico, pageWidth - 40)
-      doc.text(diagnosticoLines, 20, yPos)
-      yPos += diagnosticoLines.length * 4
-    }
 
-    yPos += 3
-    doc.setFont('helvetica', 'bold')
-    doc.text('Solución:', 20, yPos)
-    yPos += 4
-    doc.setFont('helvetica', 'normal')
-    if (servicio.solucion) {
-      const solucionLines = doc.splitTextToSize(servicio.solucion, pageWidth - 40)
-      doc.text(solucionLines, 20, yPos)
-      yPos += solucionLines.length * 4
-    }
+    const equiposData = equipos.map((equipo: any, index: number) => [
+      (index + 1).toString(),
+      equipo.tipoEquipo || 'N/A',
+      equipo.marcaModelo || 'N/A',
+      equipo.descripcionEquipo || 'N/A',
+      `S/ ${Number(equipo.costoServicio || 0).toFixed(2)}`
+    ])
 
-    yPos += 8
+    autoTable(doc, {
+      startY: yPos,
+      head: [['#', 'TIPO', 'MARCA/MODELO', 'DESCRIPCIÓN', 'COSTO']],
+      body: equiposData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
+        fontSize: 7,
+        fontStyle: 'bold',
+        halign: 'center',
+        lineWidth: 0.1,
+        lineColor: [0, 0, 0],
+        cellPadding: 1
+      },
+      bodyStyles: { fontSize: 6.5, lineWidth: 0.1, lineColor: [180, 180, 180], cellPadding: 1 },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 'auto' },
+        4: { cellWidth: 22, halign: 'right', fontStyle: 'bold' }
+      },
+      margin: { left: 15, right: 15 }
+    })
+
+    yPos = (doc as any).lastAutoTable.finalY + 4
 
     // ==================== REPUESTOS UTILIZADOS ====================
     if (servicio.items && servicio.items.length > 0) {
-      doc.setFontSize(10)
+      doc.setFontSize(8)
       doc.setFont('helvetica', 'bold')
-      doc.text('REPUESTOS UTILIZADOS', 20, yPos)
-      yPos += 5
+      doc.text('REPUESTOS', 15, yPos)
+      yPos += 4
 
       const repuestosData = servicio.items.map(item => [
         item.producto.codigo,
@@ -200,38 +212,98 @@ export const generarComprobantePDF = (servicio: ServicioComprobante) => {
 
       autoTable(doc, {
         startY: yPos,
-        head: [['Código', 'Producto', 'Cant.', 'P. Unit.', 'Subtotal']],
+        head: [['Cód.', 'Producto', 'Cant.', 'P.U.', 'Subt.']],
         body: repuestosData,
         theme: 'grid',
         headStyles: {
-          fillColor: [255, 255, 255],
+          fillColor: [240, 240, 240],
           textColor: [0, 0, 0],
-          fontSize: 9,
+          fontSize: 7,
           fontStyle: 'bold',
           halign: 'center',
           lineWidth: 0.1,
-          lineColor: [0, 0, 0]
+          lineColor: [0, 0, 0],
+          cellPadding: 1
         },
-        bodyStyles: { fontSize: 8, lineWidth: 0.1, lineColor: [150, 150, 150] },
+        bodyStyles: { fontSize: 6.5, lineWidth: 0.1, lineColor: [180, 180, 180], cellPadding: 1 },
         columnStyles: {
-          0: { cellWidth: 25 },
+          0: { cellWidth: 20 },
           1: { cellWidth: 'auto' },
-          2: { halign: 'center', cellWidth: 20 },
-          3: { halign: 'right', cellWidth: 25 },
-          4: { halign: 'right', cellWidth: 30, fontStyle: 'bold' }
+          2: { halign: 'center', cellWidth: 12 },
+          3: { halign: 'right', cellWidth: 20 },
+          4: { halign: 'right', cellWidth: 20, fontStyle: 'bold' }
         },
         margin: { left: 15, right: 15 }
       })
 
-      yPos = (doc as any).lastAutoTable.finalY + 6
+      yPos = (doc as any).lastAutoTable.finalY + 4
+    }
+
+    // ==================== SERVICIOS ADICIONALES ====================
+    // Parsear servicios adicionales para mostrarlos en una tabla
+    let serviciosAdicionalesArray: any[] = []
+    if (servicio.serviciosAdicionales) {
+      try {
+        let parsed: any
+        if (typeof servicio.serviciosAdicionales === 'string') {
+          parsed = JSON.parse(servicio.serviciosAdicionales)
+        } else if (typeof servicio.serviciosAdicionales === 'object') {
+          parsed = servicio.serviciosAdicionales
+        }
+
+        if (parsed && parsed.servicios && Array.isArray(parsed.servicios)) {
+          serviciosAdicionalesArray = parsed.servicios
+        }
+      } catch (error) {
+        console.error('❌ Error parseando servicios adicionales:', error)
+      }
+    }
+
+    if (serviciosAdicionalesArray.length > 0) {
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'bold')
+      doc.text('SERVICIOS ADICIONALES', 15, yPos)
+      yPos += 4
+
+      const serviciosData = serviciosAdicionalesArray.map((servicio: any, index: number) => [
+        (index + 1).toString(),
+        servicio.nombre || servicio.descripcion || 'Servicio adicional',
+        `S/ ${Number(servicio.precio || servicio.costo || 0).toFixed(2)}`
+      ])
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['#', 'DESCRIPCIÓN', 'PRECIO']],
+        body: serviciosData,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [240, 240, 240],
+          textColor: [0, 0, 0],
+          fontSize: 7,
+          fontStyle: 'bold',
+          halign: 'center',
+          lineWidth: 0.1,
+          lineColor: [0, 0, 0],
+          cellPadding: 1
+        },
+        bodyStyles: { fontSize: 6.5, lineWidth: 0.1, lineColor: [180, 180, 180], cellPadding: 1 },
+        columnStyles: {
+          0: { cellWidth: 8, halign: 'center' },
+          1: { cellWidth: 'auto' },
+          2: { cellWidth: 25, halign: 'right', fontStyle: 'bold' }
+        },
+        margin: { left: 15, right: 15 }
+      })
+
+      yPos = (doc as any).lastAutoTable.finalY + 4
     }
 
     // ==================== PRODUCTOS VENDIDOS ====================
     if (servicio.productosVendidos && servicio.productosVendidos.length > 0) {
-      doc.setFontSize(10)
+      doc.setFontSize(8)
       doc.setFont('helvetica', 'bold')
-      doc.text('PRODUCTOS ADICIONALES', 20, yPos)
-      yPos += 5
+      doc.text('PRODUCTOS VENDIDOS', 15, yPos)
+      yPos += 4
 
       const productosData = servicio.productosVendidos.map(item => [
         item.codigo,
@@ -243,72 +315,115 @@ export const generarComprobantePDF = (servicio: ServicioComprobante) => {
 
       autoTable(doc, {
         startY: yPos,
-        head: [['Código', 'Producto', 'Cant.', 'P. Unit.', 'Subtotal']],
+        head: [['Cód.', 'Producto', 'Cant.', 'P.U.', 'Subt.']],
         body: productosData,
         theme: 'grid',
         headStyles: {
-          fillColor: [255, 255, 255],
+          fillColor: [240, 240, 240],
           textColor: [0, 0, 0],
-          fontSize: 9,
+          fontSize: 7,
           fontStyle: 'bold',
           halign: 'center',
           lineWidth: 0.1,
-          lineColor: [0, 0, 0]
+          lineColor: [0, 0, 0],
+          cellPadding: 1
         },
-        bodyStyles: { fontSize: 8, lineWidth: 0.1, lineColor: [150, 150, 150] },
+        bodyStyles: { fontSize: 6.5, lineWidth: 0.1, lineColor: [180, 180, 180], cellPadding: 1 },
         columnStyles: {
-          0: { cellWidth: 25 },
+          0: { cellWidth: 20 },
           1: { cellWidth: 'auto' },
-          2: { halign: 'center', cellWidth: 20 },
-          3: { halign: 'right', cellWidth: 25 },
-          4: { halign: 'right', cellWidth: 30, fontStyle: 'bold' }
+          2: { halign: 'center', cellWidth: 12 },
+          3: { halign: 'right', cellWidth: 20 },
+          4: { halign: 'right', cellWidth: 20, fontStyle: 'bold' }
         },
         margin: { left: 15, right: 15 }
       })
 
-      yPos = (doc as any).lastAutoTable.finalY + 6
+      yPos = (doc as any).lastAutoTable.finalY + 4
     }
 
     // ==================== RESUMEN DE PAGOS ====================
-    doc.setFontSize(10)
+    doc.setFontSize(8)
     doc.setFont('helvetica', 'bold')
-    doc.text('RESUMEN DE PAGOS', 20, yPos)
-    yPos += 6
+    doc.text('RESUMEN', 15, yPos)
+    yPos += 4
 
-    const labelX = 25
-    const valueX = pageWidth - 25
+    const labelX = 18
+    const valueX = pageWidth - 18
 
-    // Costo de Servicio
-    doc.setFontSize(9)
+    // Calcular totales por equipo
+    const totalEquipos = equipos.reduce((sum, eq) => sum + Number(eq.costoServicio || 0), 0)
+
+    // Parsear servicios adicionales para calcular su total
+    let totalServiciosAdicionales = 0
+    if (servicio.serviciosAdicionales) {
+      try {
+        let parsed: any
+        if (typeof servicio.serviciosAdicionales === 'string') {
+          parsed = JSON.parse(servicio.serviciosAdicionales)
+        } else if (typeof servicio.serviciosAdicionales === 'object') {
+          parsed = servicio.serviciosAdicionales
+        }
+
+        if (parsed && parsed.servicios && Array.isArray(parsed.servicios)) {
+          totalServiciosAdicionales = parsed.servicios.reduce((sum: number, s: any) => sum + (Number(s.precio) || 0), 0)
+        }
+      } catch (error) {
+        console.error('❌ Error parseando servicios adicionales:', error)
+      }
+    }
+
+    // Calcular total de productos vendidos
+    const totalProductosVendidos = servicio.productosVendidos?.reduce((sum: number, item: any) =>
+      sum + (Number(item.subtotal) || (item.cantidad * item.precioUnit) || 0), 0) || 0
+
+    // Costo de Servicios (equipos)
+    doc.setFontSize(7)
     doc.setFont('helvetica', 'normal')
-    doc.text('Costo de Servicio:', labelX, yPos)
-    doc.text(`S/ ${Number(servicio.costoServicio).toFixed(2)}`, valueX, yPos, { align: 'right' })
-    yPos += 5
+    doc.text(`Servicios (${equipos.length} eq.):`, labelX, yPos)
+    doc.text(`S/ ${totalEquipos.toFixed(2)}`, valueX, yPos, { align: 'right' })
+    yPos += 3.5
+
+    // Servicios Adicionales (si hay)
+    if (totalServiciosAdicionales > 0) {
+      doc.text('Serv. Adicionales:', labelX, yPos)
+      doc.text(`S/ ${totalServiciosAdicionales.toFixed(2)}`, valueX, yPos, { align: 'right' })
+      yPos += 3.5
+    }
 
     // Costo de Repuestos
-    doc.text('Costo de Repuestos:', labelX, yPos)
+    doc.text('Repuestos:', labelX, yPos)
     doc.text(`S/ ${Number(servicio.costoRepuestos).toFixed(2)}`, valueX, yPos, { align: 'right' })
-    yPos += 2
+    yPos += 3.5
+
+    // Productos Vendidos (si hay)
+    if (totalProductosVendidos > 0) {
+      doc.text('Productos:', labelX, yPos)
+      doc.text(`S/ ${totalProductosVendidos.toFixed(2)}`, valueX, yPos, { align: 'right' })
+      yPos += 3.5
+    }
 
     // Línea separadora
     doc.setDrawColor(0, 0, 0)
-    doc.setLineWidth(0.5)
+    doc.setLineWidth(0.3)
     doc.line(labelX, yPos, valueX, yPos)
-    yPos += 5
+    yPos += 3
 
-    // TOTAL
+    // TOTAL (calculado correctamente)
+    const totalCalculado = totalEquipos + totalServiciosAdicionales + Number(servicio.costoRepuestos) + totalProductosVendidos
+    doc.setFontSize(8)
     doc.setFont('helvetica', 'bold')
     doc.text('TOTAL:', labelX, yPos)
-    doc.text(`S/ ${Number(servicio.total).toFixed(2)}`, valueX, yPos, { align: 'right' })
-    yPos += 6
+    doc.text(`S/ ${totalCalculado.toFixed(2)}`, valueX, yPos, { align: 'right' })
+    yPos += 4
 
     // PAGADO (con método de pago si existe)
+    doc.setFontSize(7)
     doc.setFont('helvetica', 'normal')
     const pagado = Number(servicio.aCuenta || 0)
     const saldo = Number(servicio.saldo)
 
     // Determinar el método de pago a mostrar
-    // Priorizar metodoPagoSaldo si existe (pago al entregar), sino usar metodoPago (pago inicial)
     const metodoPagoMostrar = servicio.metodoPagoSaldo || servicio.metodoPago
 
     if (metodoPagoMostrar) {
@@ -317,72 +432,60 @@ export const generarComprobantePDF = (servicio: ServicioComprobante) => {
       doc.text('Pagado:', labelX, yPos)
     }
     doc.text(`S/ ${pagado.toFixed(2)}`, valueX, yPos, { align: 'right' })
-    yPos += 2
+    yPos += 3.5
 
     // Solo mostrar SALDO si hay saldo pendiente
     if (saldo > 0) {
-      // Línea separadora
-      doc.line(labelX, yPos, valueX, yPos)
-      yPos += 5
-
-      // SALDO PENDIENTE
       doc.setFont('helvetica', 'bold')
-      doc.text('SALDO PENDIENTE:', labelX, yPos)
+      doc.text('SALDO:', labelX, yPos)
       doc.text(`S/ ${saldo.toFixed(2)}`, valueX, yPos, { align: 'right' })
+      yPos += 4
     }
 
-    yPos += 10
-
-    // ==================== GARANTÍA ====================
-    if (yPos > 240) {
-      doc.addPage()
-      yPos = 20
-    }
-
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'bold')
-    doc.text(`GARANTÍA: ${servicio.garantiaDias} días desde la entrega`, 20, yPos)
     yPos += 4
+
+    // ==================== GARANTÍA Y FIRMA ====================
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'bold')
+    doc.text(`GARANTÍA: ${servicio.garantiaDias} días`, 15, yPos)
+    yPos += 3
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.text('No cubre daños por mal uso, golpes, líquidos o manipulación por terceros', 20, yPos)
+    doc.setFontSize(6)
+    doc.text('No cubre mal uso, golpes, líquidos o manipulación por terceros', 15, yPos)
 
-    yPos += 10
+    yPos += 6
 
-    // ==================== CONFORMIDAD DEL CLIENTE ====================
+    // CONFORMIDAD Y FIRMA
     const nombreReceptor = servicio.quienRecibeNombre || servicio.clienteNombre
     const dniReceptor = servicio.quienRecibeDni || servicio.clienteDni
 
-    doc.setFontSize(9)
+    doc.setFontSize(7)
     doc.setFont('helvetica', 'bold')
-    doc.text('CONFORMIDAD DEL CLIENTE', 20, yPos)
-    yPos += 6
+    doc.text('CONFORME', 15, yPos)
+    yPos += 3
 
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.text(`Nombre: ${nombreReceptor}`, 20, yPos)
-    yPos += 4
-    doc.text(`DNI: ${dniReceptor}`, 20, yPos)
-    yPos += 8
+    doc.setFontSize(6)
+    doc.text(`${nombreReceptor} - DNI: ${dniReceptor}`, 15, yPos)
+    yPos += 5
 
     // Línea de firma
     doc.setDrawColor(0, 0, 0)
-    doc.setLineWidth(0.5)
-    doc.line(20, yPos, 100, yPos)
-    yPos += 4
-    doc.setFontSize(7)
-    doc.text('Firma del Cliente', 20, yPos)
+    doc.setLineWidth(0.3)
+    doc.line(15, yPos, 80, yPos)
+    yPos += 2.5
+    doc.setFontSize(6)
+    doc.text('Firma', 15, yPos)
 
     // ==================== FOOTER ====================
-    const footerY = pageHeight - 15
+    const footerY = pageHeight - 10
     doc.setDrawColor(0, 0, 0)
-    doc.setLineWidth(0.3)
-    doc.line(15, footerY - 3, pageWidth - 15, footerY - 3)
+    doc.setLineWidth(0.2)
+    doc.line(15, footerY - 2, pageWidth - 15, footerY - 2)
 
-    doc.setFontSize(7)
+    doc.setFontSize(6)
     doc.setFont('helvetica', 'normal')
     doc.text(servicio.sede.nombre, pageWidth / 2, footerY, { align: 'center' })
-    doc.text(`${servicio.sede.direccion} - Tel: ${servicio.sede.telefono}`, pageWidth / 2, footerY + 3, { align: 'center' })
 
     const fechaImpresion = new Date().toLocaleDateString('es-PE', {
       day: '2-digit',
@@ -391,8 +494,8 @@ export const generarComprobantePDF = (servicio: ServicioComprobante) => {
       hour: '2-digit',
       minute: '2-digit'
     })
-    doc.setFontSize(6)
-    doc.text(`Impreso: ${fechaImpresion}`, pageWidth / 2, footerY + 6, { align: 'center' })
+    doc.setFontSize(5)
+    doc.text(`Impreso: ${fechaImpresion}`, pageWidth / 2, footerY + 3, { align: 'center' })
 
     // Descargar PDF
     doc.save(`Comprobante_${servicio.numeroServicio}.pdf`)

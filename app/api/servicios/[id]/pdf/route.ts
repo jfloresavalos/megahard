@@ -327,246 +327,300 @@ export async function GET(
 
     y += 22;
 
-    // ==================== EQUIPO Y DETALLES ====================
+    // ==================== EQUIPOS RECIBIDOS ====================
 
-// ✅ CALCULAR ALTURA DINÁMICA PARA "DETALLES DE RECEPCION"
-let alturaDetalles = 30; // Altura base más compacta (antes 35)
+    // ✅ PARSEAR serviciosAdicionales para obtener array de equipos
+    let equipos: any[] = [];
 
-if (servicio.otrosDetalles && servicio.otrosDetalles.trim()) {
-  const detallesLineas = doc.splitTextToSize(servicio.otrosDetalles, (contentWidth - 4) / 2 - 10);
-  const lineasNecesarias = Math.min(detallesLineas.length, 3); // Máximo 3 líneas
-  alturaDetalles = 30 + (lineasNecesarias * 3.5) + 6;
-}
+    if (servicio.serviciosAdicionales) {
+      try {
+        let parsed: any;
 
-const alturaMaxima = Math.max(30, alturaDetalles);
+        if (typeof servicio.serviciosAdicionales === 'string') {
+          parsed = JSON.parse(servicio.serviciosAdicionales);
+        } else if (typeof servicio.serviciosAdicionales === 'object') {
+          parsed = servicio.serviciosAdicionales;
+        }
 
-const anchoCol = (contentWidth - 4) / 2;
+        // Extraer array de equipos
+        if (parsed && parsed.equipos && Array.isArray(parsed.equipos)) {
+          equipos = parsed.equipos;
+        }
+      } catch (error) {
+        console.error('❌ Error parseando serviciosAdicionales:', error);
+      }
+    }
 
-dibujarCaja(margin, y, anchoCol, alturaMaxima, 'DATOS DEL EQUIPO');
+    // ✅ Si no hay equipos en serviciosAdicionales, usar datos del servicio principal
+    if (equipos.length === 0) {
+      equipos = [{
+        tipoEquipo: servicio.tipoEquipo,
+        marcaModelo: servicio.marcaModelo,
+        descripcionEquipo: servicio.descripcionEquipo,
+        dejoSinCargador: servicio.dejoSinCargador,
+        conCargador: !servicio.dejoSinCargador,
+        dejoAccesorios: servicio.dejoAccesorios,
+        faltaPernos: servicio.faltaPernos,
+        tieneAranaduras: servicio.tieneAranaduras,
+        otrosDetalles: servicio.otrosDetalles,
+        costoServicio: servicio.costoServicio
+      }];
+    }
 
-let yEquipo = y + 10; // Más compacto (antes 12)
+    console.log('📦 Equipos a mostrar en PDF:', equipos.length);
 
-doc.setFont('helvetica', 'bold');
-doc.setFontSize(9);
-doc.text('Tipo:', margin + 3, yEquipo);
-doc.setFont('helvetica', 'normal');
-doc.text(servicio.tipoEquipo, margin + 13, yEquipo);
+    // ✅ CALCULAR ALTURA NECESARIA (más compacta)
+    // 7mm header + 6mm cabecera + (equipos * 5mm) + margen
+    const alturaEquipos = 13 + (equipos.length * 5);
 
-yEquipo += 5;
-doc.setFont('helvetica', 'bold');
-doc.text('Marca/Modelo:', margin + 3, yEquipo);
-doc.setFont('helvetica', 'normal');
-const marca = doc.splitTextToSize(servicio.marcaModelo || 'N/A', anchoCol - 6);
-doc.text(marca, margin + 3, yEquipo + 4);
+    dibujarCaja(margin, y, contentWidth, alturaEquipos, 'EQUIPOS RECIBIDOS');
 
-yEquipo += marca.length * 4 + 3;
-doc.setFont('helvetica', 'bold');
-doc.text('Estado:', margin + 3, yEquipo);
-doc.setFont('helvetica', 'normal');
-doc.text(servicio.estado, margin + 18, yEquipo);
+    y += 7; // Después del header
 
-dibujarCaja(margin + anchoCol + 4, y, anchoCol, alturaMaxima, 'DETALLES DE RECEPCION');
+    // ✅ PARSEAR SERVICIOS ADICIONALES ANTES DE LA TABLA
+    let serviciosAdicionalesArray: any[] = [];
 
-let yDet = y + 10; // Más compacto (antes 12)
-const xDet = margin + anchoCol + 7;
+    if (servicio.serviciosAdicionales) {
+      try {
+        let parsed: any;
 
-const detalles = [
-  { label: 'Sin cargador', checked: servicio.dejoSinCargador },
-  { label: 'Con accesorios', checked: servicio.dejoAccesorios },
-  { label: 'Falta pernos', checked: servicio.faltaPernos },
-  { label: 'Aranaduras', checked: servicio.tieneAranaduras },
-];
+        if (typeof servicio.serviciosAdicionales === 'string') {
+          parsed = JSON.parse(servicio.serviciosAdicionales);
+        } else if (typeof servicio.serviciosAdicionales === 'object') {
+          parsed = servicio.serviciosAdicionales;
+        }
 
-doc.setFontSize(8);
-detalles.forEach((det) => {
-  doc.setDrawColor(180, 180, 180);
-  doc.setLineWidth(0.2);
-  doc.rect(xDet, yDet - 2.5, 3.5, 3.5);
+        // Extraer array de servicios (NO equipos)
+        if (parsed && parsed.servicios && Array.isArray(parsed.servicios)) {
+          serviciosAdicionalesArray = parsed.servicios;
+        } else if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].nombre) {
+          serviciosAdicionalesArray = parsed;
+        }
+      } catch (error) {
+        console.error('❌ Error parseando servicios adicionales:', error);
+      }
+    }
 
-  if (det.checked) {
-    doc.setFont('helvetica', 'bold');
-    doc.text('X', xDet + 0.8, yDet + 0.5);
-  }
-
-  doc.setTextColor(negro[0], negro[1], negro[2]);
-  doc.setFont('helvetica', 'normal');
-  doc.text(det.label, xDet + 5, yDet);
-
-  yDet += 5; // Más compacto (antes 5.5)
-});
-
-// ✅ MOSTRAR OTROS DETALLES (CON ESPACIO SUFICIENTE)
-if (servicio.otrosDetalles && servicio.otrosDetalles.trim()) {
-  yDet += 2;
-  
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(negro[0], negro[1], negro[2]);
-  doc.text('OTROS DETALLES:', xDet, yDet);
-  
-  yDet += 4;
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  const detallesLineas = doc.splitTextToSize(servicio.otrosDetalles, anchoCol - 10);
-  
-  const lineasAMostrar = detallesLineas.slice(0, 3);
-  lineasAMostrar.forEach((linea: string) => {
-    doc.text(linea, xDet, yDet);
-    yDet += 3.5;
-  });
-}
-
-y += alturaMaxima + 3; // Más compacto (antes +4)
-
-// ==================== PROBLEMA ====================
-
-let textoProblema = "";
-const tieneBadges = problemasNombres.length > 0;
-const tieneOtros = servicio.otrosProblemas && servicio.otrosProblemas.trim() !== "";
-
-// 1. Construir el texto (SIN TÍTULOS REPETIDOS)
-if (tieneBadges) {
-  // Directamente los bullets
-  textoProblema += problemasNombres.map((n: string) => `• ${n}`).join("\n");
-}
-
-if (tieneOtros) {
-  if (tieneBadges) textoProblema += "\n\n"; // Añadir espacio
-  // Directamente el texto adicional
-  textoProblema += servicio.otrosProblemas;
-}
-
-// 2. Fallback: Si los campos nuevos están vacíos, usar el antiguo
-if (!tieneBadges && !tieneOtros) {
-  textoProblema = servicio.descripcionProblema || "Sin descripción";
-}
-
-doc.setFontSize(9);
-doc.setFont('helvetica', 'normal');
-doc.setTextColor(negro[0], negro[1], negro[2]);
-
-// 3. Calcular altura dinámica
-const lineasProblema = doc.splitTextToSize(textoProblema, contentWidth - 6);
-// 8mm de padding (arriba/abajo) + 4.5mm por cada línea de texto
-const alturaProblemaBox = 8 + (lineasProblema.length * 4.5); 
-
-// 4. Dibujar la caja y el texto
-dibujarCaja(margin, y, contentWidth, alturaProblemaBox, 'DESCRIPCION DEL PROBLEMA');
-doc.text(lineasProblema, margin + 3, y + 10); // 10mm desde el borde superior de la caja
-
-y += alturaProblemaBox + 3; // Mover 'y' hacia abajo + 3mm de margen
-
-// ==================== FIN DEL BLOQUE REEMPLAZADO ====================
-
-    // ==================== SERVICIOS ====================
-
+    // Cabecera de la tabla
     doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
-    doc.rect(margin, y, contentWidth, 8, 'F');
+    doc.rect(margin, y, contentWidth, 6, 'F');
     doc.setDrawColor(180, 180, 180);
-    doc.rect(margin, y, contentWidth, 8);
+    doc.line(margin, y + 6, pageWidth - margin, y + 6);
 
-    doc.setFontSize(10);
+    doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(negro[0], negro[1], negro[2]);
-    doc.text('DETALLE DE SERVICIOS Y COSTOS', margin + 2, y + 5.5);
-
-    y += 8;
-
-    doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
-    doc.rect(margin, y, contentWidth, 7, 'F');
-    doc.setDrawColor(180, 180, 180);
-    doc.line(margin, y, pageWidth - margin, y);
-    doc.line(margin, y + 7, pageWidth - margin, y + 7);
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('DESCRIPCION', margin + 2, y + 5);
-    doc.text('COSTO', pageWidth - margin - 25, y + 5, { align: 'right' });
-
-    y += 7;
-
-    doc.setFillColor(255, 255, 255);
-    doc.rect(margin, y, contentWidth, 6);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Servicio Tecnico Principal', margin + 2, y + 4);
-    doc.text(`S/ ${Number(servicio.costoServicio || 0).toFixed(2)}`, pageWidth - margin - 2, y + 4, { align: 'right' });
+    doc.text('#', margin + 2, y + 4);
+    doc.text('TIPO', margin + 8, y + 4);
+    doc.text('MARCA/MODELO', margin + 35, y + 4);
+    doc.text('ESTADO', margin + 95, y + 4);
+    doc.text('COSTO', pageWidth - margin - 18, y + 4);
 
     y += 6;
 
-    // Servicios adicionales
-    if (servicio.serviciosAdicionales && Array.isArray(servicio.serviciosAdicionales) && servicio.serviciosAdicionales.length > 0) {
-      const adicionales = servicio.serviciosAdicionales as Array<any>;
-      
-      adicionales.forEach((adic) => {
-        doc.rect(margin, y, contentWidth, 6);
-        const nombre = adic.nombre || adic.descripcion || 'Servicio adicional';
-        const precio = adic.precio || adic.costo || 0;
-        doc.text(nombre, margin + 2, y + 4);
-        doc.text(`S/ ${Number(precio).toFixed(2)}`, pageWidth - margin - 2, y + 4, { align: 'right' });
-        y += 6;
-      });
-    }
+    // ✅ LISTAR EQUIPOS EN TABLA COMPACTA
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
 
+    equipos.forEach((equipo: any, index: number) => {
+      doc.rect(margin, y, contentWidth, 5);
+
+      // Número
+      doc.text(`${index + 1}`, margin + 2, y + 3.5);
+
+      // Tipo
+      const tipo = doc.splitTextToSize(equipo.tipoEquipo || 'N/A', 25);
+      doc.text(tipo[0], margin + 8, y + 3.5);
+
+      // Marca/Modelo
+      const marca = doc.splitTextToSize(equipo.marcaModelo || 'N/A', 58);
+      doc.text(marca[0], margin + 35, y + 3.5);
+
+      // Estado
+      let estado: string[] = [];
+      if (equipo.dejoSinCargador) estado.push('Sin carg');
+      if (equipo.conCargador) estado.push('C/carg');
+      if (equipo.dejoAccesorios) estado.push('C/acces');
+      if (equipo.faltaPernos) estado.push('S/pernos');
+      if (equipo.tieneAranaduras) estado.push('Arañaz');
+
+      const estadoTexto = estado.length > 0 ? estado.join(', ') : 'Normal';
+      const estadoLineas = doc.splitTextToSize(estadoTexto, 60);
+      doc.text(estadoLineas[0], margin + 95, y + 3.5);
+
+      // Costo
+      doc.text(`S/ ${Number(equipo.costoServicio || 0).toFixed(2)}`, pageWidth - margin - 2, y + 3.5, { align: 'right' });
+
+      y += 5;
+    });
+
+    y += 3; // Espacio después de la tabla de equipos
+
+    // ==================== PROBLEMAS REPORTADOS ====================
+
+    const alturaProblemas = 13 + (equipos.length * 5);
+    dibujarCaja(margin, y, contentWidth, alturaProblemas, 'PROBLEMAS REPORTADOS');
+
+    y += 7;
+
+    // Cabecera
+    doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
+    doc.rect(margin, y, contentWidth, 6, 'F');
     doc.setDrawColor(180, 180, 180);
-    doc.line(margin, y, pageWidth - margin, y);
+    doc.line(margin, y + 6, pageWidth - margin, y + 6);
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(negro[0], negro[1], negro[2]);
+    doc.text('#', margin + 2, y + 4);
+    doc.text('EQUIPO', margin + 8, y + 4);
+    doc.text('PROBLEMA REPORTADO', margin + 50, y + 4);
+
+    y += 6;
+
+    // Listar problemas
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+
+    equipos.forEach((equipo: any, index: number) => {
+      doc.rect(margin, y, contentWidth, 5);
+
+      // Número
+      doc.text(`${index + 1}`, margin + 2, y + 3.5);
+
+      // Equipo
+      const equipoNombre = `${equipo.tipoEquipo || 'N/A'} - ${equipo.marcaModelo || 'N/A'}`;
+      const equipoLineas = doc.splitTextToSize(equipoNombre, 40);
+      doc.text(equipoLineas[0], margin + 8, y + 3.5);
+
+      // Problema
+      let problemaTexto = 'Por diagnosticar';
+      if (equipo.descripcionProblema) {
+        problemaTexto = equipo.descripcionProblema;
+      } else if (equipo.problemasSeleccionados && equipo.problemasSeleccionados.length > 0) {
+        problemaTexto = equipo.problemasSeleccionados.map((p: any) => p.nombre).join(', ');
+      }
+      const problemaLineas = doc.splitTextToSize(problemaTexto, 135);
+      doc.text(problemaLineas[0], margin + 50, y + 3.5);
+
+      y += 5;
+    });
 
     y += 3;
 
-    // ==================== TOTALES Y RESUMEN DE PAGOS ====================
+    // ==================== SERVICIOS ADICIONALES ====================
 
-    // Calcular montos
-    const totalServicio = Number(servicio.total || 0);
+    if (serviciosAdicionalesArray.length > 0) {
+      const alturaServAdicionales = 13 + (serviciosAdicionalesArray.length * 5);
+      dibujarCaja(margin, y, contentWidth, alturaServAdicionales, 'SERVICIOS ADICIONALES');
+
+      y += 7;
+
+      // Cabecera
+      doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
+      doc.rect(margin, y, contentWidth, 6, 'F');
+      doc.setDrawColor(180, 180, 180);
+      doc.line(margin, y + 6, pageWidth - margin, y + 6);
+
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(negro[0], negro[1], negro[2]);
+      doc.text('DESCRIPCION', margin + 2, y + 4);
+      doc.text('PRECIO', pageWidth - margin - 20, y + 4);
+
+      y += 6;
+
+      // Listar servicios
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+
+      serviciosAdicionalesArray.forEach((servicio: any) => {
+        doc.rect(margin, y, contentWidth, 5);
+
+        const nombre = servicio.nombre || servicio.descripcion || 'Servicio adicional';
+        const nombreLineas = doc.splitTextToSize(nombre, 150);
+        doc.text(nombreLineas[0], margin + 2, y + 3.5);
+
+        const precio = Number(servicio.precio || servicio.costo || 0);
+        doc.text(`S/ ${precio.toFixed(2)}`, pageWidth - margin - 2, y + 3.5, { align: 'right' });
+
+        y += 5;
+      });
+
+      y += 3;
+    }
+
+    // ==================== RESUMEN DE COSTOS Y PAGOS ====================
+
+    // Calcular totales
+    const totalEquipos = equipos.reduce((sum: number, eq: any) => sum + (Number(eq.costoServicio) || 0), 0);
+    const totalServiciosAdicionales = serviciosAdicionalesArray.reduce((sum: number, serv: any) => sum + (Number(serv.precio || serv.costo) || 0), 0);
+    const totalGeneral = totalEquipos + totalServiciosAdicionales;
     const pagado = Number(servicio.aCuenta || 0);
-    const saldo = Number(servicio.saldo || 0);
-
-    // Altura dinámica según si hay método de pago
+    const saldo = totalGeneral - pagado;
     const tieneMetodoPago = servicio.metodoPago && servicio.metodoPago.trim() !== '';
-    const alturaTotales = tieneMetodoPago ? 30 : 24;
 
-    const anchoCajaTot = 65;
-    const xTot = pageWidth - margin - anchoCajaTot;
+    // Calcular altura dinámica
+    let alturaResumen = 8 + 5 + 5 + 5; // header + total equipos + total + pagado
+    if (serviciosAdicionalesArray.length > 0) alturaResumen += 5; // total servicios
+    alturaResumen += 5; // saldo
 
-    doc.setFillColor(grisClaro[0], grisClaro[1], grisClaro[2]);
-    doc.rect(xTot, y, anchoCajaTot, alturaTotales, 'F');
-    doc.setDrawColor(180, 180, 180);
-    doc.rect(xTot, y, anchoCajaTot, alturaTotales);
+    // Ancho de la caja (más ancho para que no sobresalgan las letras)
+    const anchoResumen = 75;
+    const xResumen = pageWidth - margin - anchoResumen; // Posición a la derecha
 
-    let yTot = y + 6;
+    dibujarCaja(xResumen, y, anchoResumen, alturaResumen, 'RESUMEN DE COSTOS');
 
-    // TOTAL
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
+    let yResumen = y + 7;
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(negro[0], negro[1], negro[2]);
-    doc.text('TOTAL:', xTot + 3, yTot);
-    doc.text(`S/ ${totalServicio.toFixed(2)}`, xTot + anchoCajaTot - 3, yTot, { align: 'right' });
 
-    yTot += 6;
+    // Total Equipos
+    doc.text('Total Equipos:', xResumen + 3, yResumen + 3);
+    doc.text(`S/ ${totalEquipos.toFixed(2)}`, xResumen + anchoResumen - 3, yResumen + 3, { align: 'right' });
+    yResumen += 5;
 
-    // PAGADO (con método de pago si existe)
+    // Total Servicios Adicionales (solo si hay)
+    if (serviciosAdicionalesArray.length > 0) {
+      doc.text('Total Serv. Adic.:', xResumen + 3, yResumen + 3);
+      doc.text(`S/ ${totalServiciosAdicionales.toFixed(2)}`, xResumen + anchoResumen - 3, yResumen + 3, { align: 'right' });
+      yResumen += 5;
+    }
+
+    // Línea separadora
+    doc.setDrawColor(180, 180, 180);
+    doc.line(xResumen + 3, yResumen, xResumen + anchoResumen - 3, yResumen);
+    yResumen += 3;
+
+    // Total
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
+    doc.text('TOTAL:', xResumen + 3, yResumen + 3);
+    doc.text(`S/ ${totalGeneral.toFixed(2)}`, xResumen + anchoResumen - 3, yResumen + 3, { align: 'right' });
+    yResumen += 5;
+
+    // Pagado (a cuenta)
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
     doc.setTextColor(grisMedio[0], grisMedio[1], grisMedio[2]);
     if (tieneMetodoPago) {
-      doc.text(`Pagado (${servicio.metodoPago}):`, xTot + 3, yTot);
+      doc.text(`Pagado (${servicio.metodoPago}):`, xResumen + 3, yResumen + 3);
     } else {
-      doc.text('Pagado:', xTot + 3, yTot);
+      doc.text('Pagado (A cuenta):', xResumen + 3, yResumen + 3);
     }
-    doc.text(`S/ ${pagado.toFixed(2)}`, xTot + anchoCajaTot - 3, yTot, { align: 'right' });
+    doc.text(`S/ ${pagado.toFixed(2)}`, xResumen + anchoResumen - 3, yResumen + 3, { align: 'right' });
+    yResumen += 5;
 
-    yTot += 1;
-    doc.setDrawColor(180, 180, 180);
-    doc.line(xTot + 3, yTot, xTot + anchoCajaTot - 3, yTot);
-
-    yTot += 5;
-
-    // SALDO
-    doc.setFontSize(11);
+    // Saldo
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
     doc.setTextColor(negro[0], negro[1], negro[2]);
-    doc.text('SALDO:', xTot + 3, yTot);
-    doc.text(`S/ ${saldo.toFixed(2)}`, xTot + anchoCajaTot - 3, yTot, { align: 'right' });
+    doc.text('SALDO:', xResumen + 3, yResumen + 3);
+    doc.text(`S/ ${saldo.toFixed(2)}`, xResumen + anchoResumen - 3, yResumen + 3, { align: 'right' });
 
-    y += alturaTotales + 4;
+    y += alturaResumen + 4;
 
     // ==================== CUENTAS DE LA EMPRESA ====================
 

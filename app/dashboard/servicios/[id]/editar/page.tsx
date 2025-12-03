@@ -131,6 +131,7 @@ export default function EditarServicioPage() {
 
   // Nuevo problema/servicio
   const [nuevoProblema, setNuevoProblema] = useState('')
+  const [nuevoProblemaDescripcion, setNuevoProblemaDescripcion] = useState('')
   const [nuevoServicioNombre, setNuevoServicioNombre] = useState('')
   const [nuevoServicioPrecio, setNuevoServicioPrecio] = useState('0')
 
@@ -166,6 +167,13 @@ export default function EditarServicioPage() {
   const [serviciosAdicionales, setServiciosAdicionales] = useState<ServicioSeleccionado[]>([])
   const [metodoPago, setMetodoPago] = useState('EFECTIVO')
   const [aCuenta, setACuenta] = useState('0')
+  const [dejaAdelanto, setDejaAdelanto] = useState(false)
+
+  // ✅ MÚLTIPLES EQUIPOS
+  const [equipos, setEquipos] = useState<any[]>([])
+  const [equipoIndex, setEquipoIndex] = useState<number | null>(null)
+  const [modalEquipoAbierto, setModalEquipoAbierto] = useState(false)
+  const [conCargador, setConCargador] = useState(false)
 
   // Otros
   const [fechaEstimada, setFechaEstimada] = useState('')
@@ -301,28 +309,37 @@ export default function EditarServicioPage() {
     if (data.success) {
       const s = data.servicio
       console.log('✅ [EDITAR] Servicio cargado correctamente:', s.numeroServicio)
+      console.log('📋 [EDITAR] Objeto servicio completo:', s)
 
       // Datos básicos
       setNumeroServicio(s.numeroServicio)
       setEstadoServicio(s.estado)
-      setClienteNombre(s.clienteNombre)
-      setClienteDni(s.clienteDni)
-      setClienteCelular(s.clienteCelular)
+
+      // Datos del cliente
+      console.log('👤 [EDITAR] Datos del cliente recibidos:', {
+        nombre: s.clienteNombre,
+        dni: s.clienteDni,
+        celular: s.clienteCelular
+      })
+      setClienteNombre(s.clienteNombre || '')
+      setClienteDni(s.clienteDni || '')
+      setClienteCelular(s.clienteCelular || '')
 
       // Servicio
       setSedeId(s.sedeId || '')
       setTecnicoId(s.usuarioId || s.usuario?.id || '')
-      setTipoEquipo(s.tipoEquipo || 'LAPTOP')
-      setMarcaEquipo(s.marcaModelo || '')
-      setDescripcionEquipo(s.descripcionEquipo || '')
+      
+      // ✅ NO cargar datos del primer equipo aquí - solo usamos el modal para editar equipos
+      // Los equipos vienen desde serviciosAdicionales JSON
+      resetearFormularioEquipo()
 
-      // Recepción
-      setDejoSinCargador(s.dejoSinCargador || false)
-      setDejoAccesorios(s.dejoAccesorios || false)
+      // Recepción - MANTENER VACÍO para equipos múltiples
+      setDejoSinCargador(false)
+      setDejoAccesorios(false)
       setEsCotizacion(s.esCotizacion || false)
-      setFaltaPernos(s.faltaPernos || false)
-      setTieneAranaduras(s.tieneAranaduras || false)
-      setOtrosDetalles(s.otrosDetalles || '')
+      setFaltaPernos(false)
+      setTieneAranaduras(false)
+      setOtrosDetalles('')
 
       // PROBLEMAS
       if (s.problemasReportados && Array.isArray(s.problemasReportados) && s.problemasReportados.length > 0) {
@@ -359,23 +376,54 @@ export default function EditarServicioPage() {
       // Costos
       setCostoServicio(String(s.costoServicio || 0))
       
-      // SERVICIOS ADICIONALES
-      if (s.serviciosAdicionales && Array.isArray(s.serviciosAdicionales)) {
-        const serviciosValidos = s.serviciosAdicionales.filter((srv: any) => 
-          srv && typeof srv === 'object' && srv.nombre && srv.precio !== undefined
-        )
-        setServiciosAdicionales(serviciosValidos)
+      // SERVICIOS ADICIONALES Y EQUIPOS
+      if (s.serviciosAdicionales) {
+        try {
+          let serviciosData: any = s.serviciosAdicionales
+          
+          // Si es string, parsear JSON
+          if (typeof serviciosData === 'string') {
+            serviciosData = JSON.parse(serviciosData)
+          }
+          
+          // Extraer equipos
+          if (serviciosData.equipos && Array.isArray(serviciosData.equipos)) {
+            console.log('✅ [EDITAR] Equipos cargados:', serviciosData.equipos.length)
+            console.log('📋 [EDITAR] Detalle de equipos:', serviciosData.equipos)
+            setEquipos(serviciosData.equipos)
+          }
+          
+          // Extraer servicios adicionales
+          if (serviciosData.servicios && Array.isArray(serviciosData.servicios)) {
+            const serviciosValidos = serviciosData.servicios.filter((srv: any) => 
+              srv && typeof srv === 'object' && srv.nombre && srv.precio !== undefined
+            )
+            setServiciosAdicionales(serviciosValidos)
+          } else {
+            setServiciosAdicionales([])
+          }
+        } catch (error) {
+          console.error('Error al parsear serviciosAdicionales:', error)
+          setEquipos([])
+          setServiciosAdicionales([])
+        }
       } else {
+        setEquipos([])
         setServiciosAdicionales([])
       }
       
       setMetodoPago(s.metodoPago || 'EFECTIVO')
       setACuenta(String(s.aCuenta || 0))
+      setDejaAdelanto((s.aCuenta || 0) > 0) // Marcar checkbox si hay adelanto
 
       // Otros
       if (s.fechaEntregaEstimada) {
+        // Convertir a fecha local de Perú (UTC-5) para evitar cambios de día
         const fecha = new Date(s.fechaEntregaEstimada)
-        setFechaEstimada(fecha.toISOString().split('T')[0])
+        const year = fecha.getFullYear()
+        const month = String(fecha.getMonth() + 1).padStart(2, '0')
+        const day = String(fecha.getDate()).padStart(2, '0')
+        setFechaEstimada(`${year}-${month}-${day}`)
       }
       setGarantiaDias(String(s.garantiaDias || 30))
       setPrioridad(s.prioridad || 'NORMAL')
@@ -539,7 +587,10 @@ const agregarProblema = (problema: any) => {
       const response = await fetch('/api/problemas-comunes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: nuevoProblema })
+        body: JSON.stringify({
+          nombre: nuevoProblema,
+          descripcion: nuevoProblemaDescripcion || null
+        })
       })
 
       const data = await response.json()
@@ -548,6 +599,7 @@ const agregarProblema = (problema: any) => {
         setProblemasDisponibles([...problemasDisponibles, data.problema])
         agregarProblema(data.problema)
         setNuevoProblema('')
+        setNuevoProblemaDescripcion('')
         setModalNuevoProblema(false)
         alert('✅ Problema agregado')
       } else {
@@ -612,10 +664,113 @@ const agregarProblema = (problema: any) => {
     setServiciosAdicionales(nuevos)
   }
 
+  // ✅ EQUIPOS - Funciones para editar/eliminar
+  const editarEquipo = (index: number) => {
+    const equipo = equipos[index]
+    console.log('🔧 [EDITAR EQUIPO] Datos del equipo:', equipo)
+
+    setTipoEquipo(equipo.tipoEquipo || 'LAPTOP')
+
+    // Separar marca y modelo del campo marcaModelo
+    const partes = (equipo.marcaModelo || '').split(' ')
+    setMarcaEquipo(partes[0] || '')
+    setDescripcionEquipo(partes.slice(1).join(' ') || equipo.descripcionEquipo || '')
+
+    // ✅ Cargar valores exactos como fueron guardados
+    setDejoSinCargador(Boolean(equipo.dejoSinCargador))
+    setConCargador(Boolean(equipo.conCargador))
+
+    setDejoAccesorios(Boolean(equipo.dejoAccesorios))
+    setEsCotizacion(Boolean(equipo.esCotizacion))
+    setProblemasSeleccionados(equipo.problemasSeleccionados || [])
+    setDescripcionProblema(equipo.otrosProblemas || '')
+    setFaltaPernos(Boolean(equipo.faltaPernos))
+    setTieneAranaduras(Boolean(equipo.tieneAranaduras))
+    setOtrosDetalles(equipo.otrosDetalles || '')
+    setCostoServicio(String(equipo.costoServicio || 0))
+    setEquipoIndex(index)
+    setModalEquipoAbierto(true)
+  }
+
+  const eliminarEquipo = (index: number) => {
+    if (confirm('¿Eliminar este equipo?')) {
+      setEquipos(equipos.filter((_, i) => i !== index))
+    }
+  }
+
+  const guardarEquipo = () => {
+    if (!tipoEquipo) {
+      alert('Seleccione tipo de equipo')
+      return
+    }
+
+    if (problemasSeleccionados.length === 0 && !descripcionProblema) {
+      alert('Debe seleccionar al menos un problema o agregar una descripción')
+      return
+    }
+
+    if (!costoServicio || parseFloat(costoServicio) <= 0) {
+      alert('El costo del servicio debe ser mayor a 0')
+      return
+    }
+
+    const equipoActualizado = {
+      id: equipoIndex !== null ? equipos[equipoIndex].id : `equipo-${Date.now()}`,
+      tipoEquipo,
+      marcaModelo: `${marcaEquipo} ${descripcionEquipo}`.trim(),
+      descripcionEquipo,
+      dejoSinCargador,
+      conCargador,
+      dejoAccesorios,
+      esCotizacion,
+      problemasSeleccionados,
+      otrosProblemas: descripcionProblema,
+      faltaPernos,
+      tieneAranaduras,
+      otrosDetalles,
+      costoServicio: parseFloat(costoServicio) || 0,
+      fotos: [] // Las fotos son a nivel de servicio
+    }
+
+    console.log('💾 [GUARDAR EQUIPO] Datos a guardar:', equipoActualizado)
+
+    if (equipoIndex !== null) {
+      // Editar equipo existente
+      const nuevosEquipos = [...equipos]
+      nuevosEquipos[equipoIndex] = equipoActualizado
+      setEquipos(nuevosEquipos)
+    } else {
+      // Agregar nuevo equipo
+      setEquipos([...equipos, equipoActualizado])
+    }
+
+    setEquipoIndex(null)
+    setModalEquipoAbierto(false)
+    resetearFormularioEquipo()
+    alert('Equipo guardado correctamente')
+  }
+
+  const resetearFormularioEquipo = () => {
+    setTipoEquipo('LAPTOP')
+    setMarcaEquipo('')
+    setDescripcionEquipo('')
+    setDejoSinCargador(false)
+    setConCargador(false)
+    setDejoAccesorios(false)
+    setEsCotizacion(false)
+    setProblemasSeleccionados([])
+    setDescripcionProblema('')
+    setFaltaPernos(false)
+    setTieneAranaduras(false)
+    setOtrosDetalles('')
+    setCostoServicio('0')
+  }
+
   const calcularTotal = () => {
-    const costoServ = parseFloat(costoServicio) || 0
+    // Sumar costos de todos los equipos
+    const costoEquipos = equipos.reduce((sum, eq) => sum + (eq.costoServicio || 0), 0)
     const costoAdicionales = serviciosAdicionales.reduce((sum, s) => sum + s.precio, 0)
-    return costoServ + costoAdicionales
+    return costoEquipos + costoAdicionales
   }
 
   const calcularSaldo = () => {
@@ -643,13 +798,13 @@ const agregarProblema = (problema: any) => {
       return
     }
 
-    if (problemasSeleccionados.length === 0 && !descripcionProblema) {
-      alert('Seleccione al menos un problema')
+    if (!sedeId || !tecnicoId) {
+      alert('Seleccione sede y técnico')
       return
     }
 
-    if (!sedeId || !tecnicoId) {
-      alert('Seleccione sede y técnico')
+    if (equipos.length === 0) {
+      alert('Debe agregar al menos un equipo')
       return
     }
 
@@ -682,23 +837,15 @@ const agregarProblema = (problema: any) => {
           clienteCelular,
           tecnicoId,
           sedeId,
-          tipoEquipo,
-          marcaEquipo,
-          descripcionEquipo,
-          dejoSinCargador,
-          dejoAccesorios,
-          esCotizacion,
+          // ✅ Enviar array de equipos actualizado
+          equipos: equipos,
           problemasReportados: problemasSeleccionados.map(p => p.id),
           otrosProblemas: descripcionProblema,
-          faltaPernos,
-          tieneAranaduras,
-          otrosDetalles,
-          costoServicio: parseFloat(costoServicio),
           serviciosAdicionales,
-          metodoPago,
-          fechaEstimada: fechaEstimada || null,
+          metodoPago: dejaAdelanto ? metodoPago : null,
+          fechaEstimada: fechaEstimada ? new Date(fechaEstimada + 'T00:00:00-05:00').toISOString() : null,
           garantiaDias: parseInt(garantiaDias),
-          aCuenta: parseFloat(aCuenta),
+          aCuenta: dejaAdelanto ? parseFloat(aCuenta) : 0,
           prioridad,
           fotosEquipo: todasLasFotos
         })
@@ -832,7 +979,14 @@ const agregarProblema = (problema: any) => {
           </h2>
 
           <BuscadorCliente
-            onClienteSeleccionado={setClienteSeleccionado}
+            onClienteSeleccionado={(cliente) => {
+              setClienteSeleccionado(cliente)
+              if (cliente) {
+                setClienteNombre(cliente.nombre)
+                setClienteDni(cliente.numeroDoc)
+                setClienteCelular(cliente.telefono || '')
+              }
+            }}
             clienteNombre={clienteNombre}
             clienteDni={clienteDni}
             clienteCelular={clienteCelular}
@@ -930,7 +1084,7 @@ const agregarProblema = (problema: any) => {
           </div>
         </div>
 
-        {/* EQUIPO EN RECEPCIÓN */}
+        {/* ✅ EQUIPOS MÚLTIPLES */}
         <div style={{
           backgroundColor: 'white',
           padding: 'clamp(1rem, 3vw, 2rem)',
@@ -938,136 +1092,113 @@ const agregarProblema = (problema: any) => {
           marginBottom: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
-          <h2 style={{
-            fontSize: '1.25rem',
-            fontWeight: '600',
-            marginBottom: '1.5rem',
-            borderBottom: '2px solid #e5e7eb',
-            paddingBottom: '0.5rem'
-          }}>
-            💻 EQUIPO EN RECEPCIÓN
-          </h2>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '1rem',
-            marginBottom: '1rem'
-          }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
-                Tipo de Equipo *
-              </label>
-              <select
-                value={tipoEquipo}
-                onChange={(e) => setTipoEquipo(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem'
-                }}
-              >
-                <option value="LAPTOP">Laptop</option>
-                <option value="PC">PC / Computadora</option>
-                <option value="CELULAR">Celular</option>
-                <option value="TABLET">Tablet</option>
-                <option value="IMPRESORA">Impresora</option>
-                <option value="OTROS">Otros</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
-                Marca
-              </label>
-              <input
-                type="text"
-                value={marcaEquipo}
-                onChange={(e) => setMarcaEquipo(e.target.value)}
-                placeholder="Ej: HP, Lenovo"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
-                Modelo/Detalles
-              </label>
-              <input
-                type="text"
-                value={descripcionEquipo}
-                onChange={(e) => setDescripcionEquipo(e.target.value)}
-                placeholder="Ej: Pavilion 15"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem'
-                }}
-              />
-            </div>
-          </div>
-
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '1.5rem',
-            padding: '1rem',
-            backgroundColor: '#f9fafb',
-            borderRadius: '6px'
-          }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-              <input type="checkbox" checked={dejoSinCargador} onChange={(e) => setDejoSinCargador(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-              <span>Sin cargador</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-              <input type="checkbox" checked={dejoAccesorios} onChange={(e) => setDejoAccesorios(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-              <span>Dejó accesorios</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-              <input type="checkbox" checked={esCotizacion} onChange={(e) => setEsCotizacion(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-              <span>Es cotización</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-              <input type="checkbox" checked={faltaPernos} onChange={(e) => setFaltaPernos(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-              <span>Falta pernos</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-              <input type="checkbox" checked={tieneAranaduras} onChange={(e) => setTieneAranaduras(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-              <span>Tiene arañaduras</span>
-            </label>
-          </div>
-
-          <div style={{ marginTop: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
-              Otros detalles
-            </label>
-            <textarea
-              value={otrosDetalles}
-              onChange={(e) => setOtrosDetalles(e.target.value)}
-              rows={3}
-              placeholder="Otros detalles del equipo..."
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: '0.875rem',
-                resize: 'vertical'
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '2px solid #e5e7eb', paddingBottom: '0.5rem' }}>
+            <h2 style={{
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              margin: 0
+            }}>
+              📱 EQUIPOS ({equipos.length})
+            </h2>
+            <button
+              type="button"
+              onClick={() => {
+                resetearFormularioEquipo()
+                setEquipoIndex(null)
+                setModalEquipoAbierto(true)
               }}
-            />
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '0.875rem'
+              }}
+            >
+              ➕ Agregar Equipo
+            </button>
           </div>
+
+          {equipos.length > 0 ? (
+            <div style={{
+              border: '1px solid #e5e7eb',
+              borderRadius: '6px',
+              overflow: 'hidden'
+            }}>
+              {equipos.map((equipo, idx) => (
+                <div key={idx} style={{
+                  padding: '1rem',
+                  borderBottom: idx < equipos.length - 1 ? '1px solid #e5e7eb' : 'none',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto',
+                  gap: '1rem',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <div style={{ fontWeight: '600', color: '#1f2937' }}>
+                      {equipo.tipoEquipo} - {equipo.marcaModelo}
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                      Descripción: {equipo.descripcionEquipo}
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: '#10b981', marginTop: '0.25rem', fontWeight: '600' }}>
+                      Costo: S/ {equipo.costoServicio || 0}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => editarEquipo(idx)}
+                      style={{
+                        padding: '0.4rem 0.8rem',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: '600'
+                      }}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => eliminarEquipo(idx)}
+                      style={{
+                        padding: '0.4rem 0.8rem',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: '600'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{
+              padding: '2rem',
+              textAlign: 'center',
+              color: '#6b7280',
+              backgroundColor: '#f9fafb',
+              borderRadius: '6px'
+            }}>
+              <p>No hay equipos agregados</p>
+            </div>
+          )}
         </div>
+
+
 
         {/* ✅ FOTOS DEL EQUIPO - GESTIÓN COMPLETA */}
         <div style={{
@@ -1278,52 +1409,6 @@ const agregarProblema = (problema: any) => {
         </div>
 
         {/* PROBLEMAS (igual que nuevo) */}
-        <div style={{
-          backgroundColor: 'white',
-          padding: 'clamp(1rem, 3vw, 2rem)',
-          borderRadius: '8px',
-          marginBottom: '1.5rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '1.5rem',
-            borderBottom: '2px solid #e5e7eb',
-            paddingBottom: '0.5rem',
-            flexWrap: 'wrap',
-            gap: '1rem'
-          }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>
-              🔧 PROBLEMAS ENCONTRADOS
-            </h2>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button type="button" onClick={() => setModalAgregarProblema(true)} style={{ padding: '0.5rem 1rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem' }}>
-                + Agregar
-              </button>
-              <button type="button" onClick={() => setModalNuevoProblema(true)} style={{ padding: '0.5rem 1rem', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem' }}>
-                + Nuevo
-              </button>
-            </div>
-          </div>
-
-          {problemasSeleccionados.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-              {problemasSeleccionados.map(problema => (
-                <div key={problema.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', backgroundColor: '#dbeafe', borderRadius: '6px', fontSize: '0.875rem' }}>
-                  <span>{problema.nombre}</span>
-                  <button type="button" onClick={() => eliminarProblema(problema.id)} style={{ padding: '0.25rem 0.5rem', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>✕</button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>Descripción adicional</label>
-            <textarea value={descripcionProblema} onChange={(e) => setDescripcionProblema(e.target.value)} rows={3} placeholder="Detalles adicionales..." style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', resize: 'vertical' }} />
-          </div>
-        </div>
 
 {/* ✅ SECCIÓN: INFORMACIÓN DE REPARACIÓN (SOLO LECTURA) */}
 {servicioCompleto && (servicioCompleto.diagnostico || servicioCompleto.solucion || 
@@ -1517,61 +1602,8 @@ const agregarProblema = (problema: any) => {
           marginBottom: '1.5rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
-          <h2 style={{
-            fontSize: '1.25rem',
-            fontWeight: '600',
-            marginBottom: '1.5rem',
-            borderBottom: '2px solid #e5e7eb',
-            paddingBottom: '0.5rem'
-          }}>
-            💰 COSTOS Y SERVICIOS
-          </h2>
-
-          {!puedeEditarCostos && (
-            <div style={{ 
-              padding: '1rem', 
-              backgroundColor: '#fee2e2', 
-              borderRadius: '6px',
-              marginBottom: '1rem',
-              color: '#dc2626',
-              fontSize: '0.875rem',
-              fontWeight: '600'
-            }}>
-              ⚠️ No se pueden editar costos - Servicio ya {estadoServicio.toLowerCase().replace(/_/g, ' ')}
-            </div>
-          )}
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>Costo del Servicio *</label>
-              <input
-                type="number"
-                value={costoServicio}
-                onChange={(e) => setCostoServicio(e.target.value)}
-                disabled={!puedeEditarCostos}
-                required
-                min="0"
-                step="0.01"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  opacity: puedeEditarCostos ? 1 : 0.5,
-                  cursor: puedeEditarCostos ? 'text' : 'not-allowed'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>Garantía (días)</label>
-              <input type="number" value={garantiaDias} onChange={(e) => setGarantiaDias(e.target.value)} min="0" style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem' }} />
-            </div>
-          </div>
-
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '600', margin: 0 }}>Servicios Adicionales</h3>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>🛠️ SERVICIOS ADICIONALES</h2>
             {puedeEditarCostos && (
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button type="button" onClick={() => setModalAgregarServicio(true)} style={{ padding: '0.5rem 1rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem' }}>+ Agregar</button>
@@ -1632,42 +1664,92 @@ const agregarProblema = (problema: any) => {
             💳 MÉTODO DE PAGO Y TOTALES
           </h2>
 
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              cursor: 'pointer',
+              marginBottom: '1rem',
+              fontSize: '1rem',
+              fontWeight: '600',
+              color: '#1e40af'
+            }}>
+              <input
+                type="checkbox"
+                checked={dejaAdelanto}
+                onChange={(e) => {
+                  setDejaAdelanto(e.target.checked)
+                  if (!e.target.checked) {
+                    setACuenta('0')
+                    setMetodoPago('EFECTIVO')
+                  }
+                }}
+                disabled={!puedeEditarCostos}
+                style={{ width: '20px', height: '20px', cursor: puedeEditarCostos ? 'pointer' : 'not-allowed' }}
+              />
+              <span>💳 ¿Recibir Adelanto del Cliente?</span>
+            </label>
+
+            {dejaAdelanto ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>Método de Pago del Adelanto</label>
+                  <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)} disabled={!puedeEditarCostos} style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', opacity: puedeEditarCostos ? 1 : 0.5, cursor: puedeEditarCostos ? 'pointer' : 'not-allowed' }}>
+                    <option value="">-- Seleccionar --</option>
+                    <option value="EFECTIVO">Efectivo</option>
+                    <option value="YAPE_PERSONAL">Yape Personal</option>
+                    <option value="YAPE_EMPRESA">Yape Empresa</option>
+                    <option value="DEPOSITO">Depósito</option>
+                    <option value="INTERBANCARIO">Interbancario</option>
+                    <option value="VISA">Visa</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>Monto del Adelanto</label>
+                  <input
+                    type="number"
+                    value={aCuenta}
+                    onChange={(e) => setACuenta(e.target.value)}
+                    disabled={!puedeEditarCostos}
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      opacity: puedeEditarCostos ? 1 : 0.5,
+                      cursor: puedeEditarCostos ? 'text' : 'not-allowed'
+                    }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>
+                ✓ No se registrará adelanto por el momento
+              </p>
+            )}
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>Método de Pago</label>
-              <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)} style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem' }}>
-                <option value="EFECTIVO">Efectivo</option>
-                <option value="YAPE_PERSONAL">Yape Personal</option>
-                <option value="YAPE_EMPRESA">Yape Empresa</option>
-                <option value="DEPOSITO">Depósito</option>
-                <option value="INTERBANCARIO">Interbancario</option>
-                <option value="VISA">Visa</option>
-              </select>
-            </div>
-
-            <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>Fecha Estimada de Entrega</label>
-              <input type="date" value={fechaEstimada} onChange={(e) => setFechaEstimada(e.target.value)} style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem' }} />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>A Cuenta</label>
               <input
-                type="number"
-                value={aCuenta}
-                onChange={(e) => setACuenta(e.target.value)}
-                disabled={!puedeEditarCostos}
-                min="0"
-                step="0.01"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  opacity: puedeEditarCostos ? 1 : 0.5,
-                  cursor: puedeEditarCostos ? 'text' : 'not-allowed'
-                }}
+                type="date"
+                value={fechaEstimada}
+                min={(() => {
+                  const today = new Date()
+                  const year = today.getFullYear()
+                  const month = String(today.getMonth() + 1).padStart(2, '0')
+                  const day = String(today.getDate()).padStart(2, '0')
+                  return `${year}-${month}-${day}`
+                })()}
+                onChange={(e) => setFechaEstimada(e.target.value)}
+                style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem' }}
               />
             </div>
           </div>
@@ -1744,15 +1826,87 @@ const agregarProblema = (problema: any) => {
         problemas={problemasDisponibles}
         onSeleccionar={agregarProblema}
         onCrearNuevo={() => setModalNuevoProblema(true)}
+        zIndex={1100}
       />
 
-      <Modal isOpen={modalNuevoProblema} onClose={() => setModalNuevoProblema(false)} title="Crear Nuevo Problema">
+      <Modal
+        isOpen={modalNuevoProblema}
+        onClose={() => {
+          setModalNuevoProblema(false)
+          setNuevoProblema('')
+          setNuevoProblemaDescripcion('')
+        }}
+        title="Crear Nuevo Problema"
+        zIndex={1100}
+      >
         <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Nombre del problema *</label>
-          <input type="text" value={nuevoProblema} onChange={(e) => setNuevoProblema(e.target.value)} placeholder="Ej: Batería no carga" style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', marginBottom: '1rem' }} />
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+            Nombre del problema *
+          </label>
+          <input
+            type="text"
+            value={nuevoProblema}
+            onChange={(e) => setNuevoProblema(e.target.value)}
+            placeholder="Ej: Problema de batería"
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              marginBottom: '1rem'
+            }}
+          />
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+            Descripción (opcional)
+          </label>
+          <textarea
+            value={nuevoProblemaDescripcion}
+            onChange={(e) => setNuevoProblemaDescripcion(e.target.value)}
+            placeholder="Ej: Síntomas comunes, reparaciones..."
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              marginBottom: '1rem',
+              minHeight: '80px',
+              fontFamily: 'inherit',
+              resize: 'vertical'
+            }}
+          />
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-            <button type="button" onClick={() => setModalNuevoProblema(false)} style={{ padding: '0.75rem 1.5rem', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancelar</button>
-            <button type="button" onClick={crearNuevoProblema} style={{ padding: '0.75rem 1.5rem', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Crear y Agregar</button>
+            <button
+              type="button"
+              onClick={() => {
+                setModalNuevoProblema(false)
+                setNuevoProblema('')
+                setNuevoProblemaDescripcion('')
+              }}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={crearNuevoProblema}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              Crear y Agregar
+            </button>
           </div>
         </div>
       </Modal>
@@ -1778,6 +1932,452 @@ const agregarProblema = (problema: any) => {
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
             <button type="button" onClick={() => setModalNuevoServicio(false)} style={{ padding: '0.75rem 1.5rem', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancelar</button>
             <button type="button" onClick={crearNuevoServicioAdicional} style={{ padding: '0.75rem 1.5rem', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Crear y Agregar</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ✅ MODAL EDITAR EQUIPO */}
+      <Modal
+        isOpen={modalEquipoAbierto}
+        onClose={() => {
+          setModalEquipoAbierto(false)
+          resetearFormularioEquipo()
+          setEquipoIndex(null)
+        }}
+        title={equipoIndex !== null ? '✏️ Editar Equipo' : '➕ Agregar Nuevo Equipo'}
+        maxHeight="95vh"
+      >
+        <div style={{ maxHeight: '90vh', overflowY: 'auto', paddingRight: '1rem' }}>
+          {/* DATOS BÁSICOS DEL EQUIPO */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <h4 style={{
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              color: '#374151',
+              margin: '0 0 0.75rem 0',
+              paddingBottom: '0.5rem',
+              borderBottom: '1px solid #e5e7eb'
+            }}>
+              📱 Datos del Equipo
+            </h4>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '0.9rem'
+            }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: '600', fontSize: '0.85rem', color: '#374151' }}>
+                  Tipo *
+                </label>
+                <select
+                  value={tipoEquipo}
+                  onChange={(e) => setTipoEquipo(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '5px',
+                    fontSize: '0.85rem',
+                    backgroundColor: 'white',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                  onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="LAPTOP">Laptop</option>
+                  <option value="PC">PC / Computadora</option>
+                  <option value="CELULAR">Celular</option>
+                  <option value="TABLET">Tablet</option>
+                  <option value="IMPRESORA">Impresora</option>
+                  <option value="OTROS">Otros</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: '600', fontSize: '0.85rem', color: '#374151' }}>
+                  Marca
+                </label>
+                <input
+                  type="text"
+                  value={marcaEquipo}
+                  onChange={(e) => setMarcaEquipo(e.target.value)}
+                  placeholder="HP, Lenovo..."
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '5px',
+                    fontSize: '0.85rem',
+                    transition: 'all 0.15s'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                  onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                />
+              </div>
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: '600', fontSize: '0.85rem', color: '#374151' }}>
+                  Modelo
+                </label>
+                <input
+                  type="text"
+                  value={descripcionEquipo}
+                  onChange={(e) => setDescripcionEquipo(e.target.value)}
+                  placeholder="Pavilion 15, MacBook Pro 13..."
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '5px',
+                    fontSize: '0.85rem',
+                    transition: 'all 0.15s'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                  onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ESTADO DE RECEPCIÓN */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <h4 style={{
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              color: '#374151',
+              margin: '0 0 0.75rem 0',
+              paddingBottom: '0.5rem',
+              borderBottom: '1px solid #e5e7eb'
+            }}>
+              ✅ Estado de Recepción
+            </h4>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+              gap: '0.8rem'
+            }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.8rem' }}>
+                <input
+                  type="checkbox"
+                  checked={dejoSinCargador}
+                  onChange={(e) => {
+                    setDejoSinCargador(e.target.checked)
+                    if (e.target.checked) setConCargador(false)
+                  }}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Sin cargador</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.8rem' }}>
+                <input
+                  type="checkbox"
+                  checked={conCargador}
+                  onChange={(e) => {
+                    setConCargador(e.target.checked)
+                    if (e.target.checked) setDejoSinCargador(false)
+                  }}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Con cargador</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.8rem' }}>
+                <input
+                  type="checkbox"
+                  checked={dejoAccesorios}
+                  onChange={(e) => setDejoAccesorios(e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Dejó accesorios</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.8rem' }}>
+                <input
+                  type="checkbox"
+                  checked={faltaPernos}
+                  onChange={(e) => setFaltaPernos(e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Falta pernos</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.8rem' }}>
+                <input
+                  type="checkbox"
+                  checked={tieneAranaduras}
+                  onChange={(e) => setTieneAranaduras(e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Arañaduras</span>
+              </label>
+            </div>
+          </div>
+
+          {/* PROBLEMAS */}
+          <div style={{ marginBottom: '1.25rem', display: 'flex', flexDirection: 'column', maxHeight: '14rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
+              <h4 style={{
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                color: '#374151',
+                margin: 0
+              }}>
+                🔧 Problemas
+              </h4>
+              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setModalAgregarProblema(true)}
+                  style={{
+                    padding: '0.4rem 0.8rem',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    transition: 'all 0.15s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                >
+                  + Agregar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalNuevoProblema(true)}
+                  style={{
+                    padding: '0.4rem 0.8rem',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    transition: 'all 0.15s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+                >
+                  + Nuevo
+                </button>
+              </div>
+            </div>
+
+            {problemasSeleccionados.length > 0 && (
+              <div style={{
+                border: '1px solid #e5e7eb',
+                borderRadius: '5px',
+                overflow: 'auto',
+                backgroundColor: '#fafafa',
+                minHeight: 0,
+                flex: 1
+              }}>
+                {problemasSeleccionados.map((p, index) => (
+                  <div
+                    key={p.id}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr auto',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.6rem 0.75rem',
+                      borderBottom: index < problemasSeleccionados.length - 1 ? '1px solid #e5e7eb' : 'none',
+                      fontSize: '0.8rem'
+                    }}
+                  >
+                    <span>{p.nombre}</span>
+                    <button
+                      type="button"
+                      onClick={() => eliminarProblema(p.id)}
+                      style={{
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.65rem',
+                        fontWeight: '600',
+                        transition: 'all 0.15s',
+                        flexShrink: 0
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: '600', fontSize: '0.85rem', color: '#374151' }}>
+                Descripción
+              </label>
+              <textarea
+                value={descripcionProblema}
+                onChange={(e) => setDescripcionProblema(e.target.value)}
+                rows={2}
+                placeholder="Síntomas, fallas..."
+                style={{
+                  width: '100%',
+                  padding: '0.6rem 0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '5px',
+                  fontSize: '0.85rem',
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                  transition: 'all 0.15s'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+              />
+            </div>
+          </div>
+
+          {/* DETALLES Y COSTO */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '1.2rem',
+            marginBottom: '1.25rem'
+          }}>
+            <div>
+              <h4 style={{
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                color: '#374151',
+                margin: '0 0 0.75rem 0',
+                paddingBottom: '0.5rem',
+                borderBottom: '1px solid #e5e7eb'
+              }}>
+                📝 Detalles
+              </h4>
+              <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: '600', fontSize: '0.85rem', color: '#374151' }}>
+                Otros detalles
+              </label>
+              <textarea
+                value={otrosDetalles}
+                onChange={(e) => setOtrosDetalles(e.target.value)}
+                rows={2}
+                placeholder="Información adicional..."
+                style={{
+                  width: '100%',
+                  padding: '0.6rem 0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '5px',
+                  fontSize: '0.85rem',
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                  transition: 'all 0.15s'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+              />
+            </div>
+
+            <div>
+              <h4 style={{
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                color: '#374151',
+                margin: '0 0 0.75rem 0',
+                paddingBottom: '0.5rem',
+                borderBottom: '1px solid #e5e7eb'
+              }}>
+                💰 Costo
+              </h4>
+              <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: '600', fontSize: '0.85rem', color: '#374151' }}>
+                Monto (S/.) *
+              </label>
+              <input
+                type="number"
+                value={costoServicio}
+                onChange={(e) => setCostoServicio(e.target.value)}
+                required
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                style={{
+                  width: '100%',
+                  padding: '0.6rem 0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '5px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  textAlign: 'center',
+                  transition: 'all 0.15s'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+              />
+              <div style={{
+                marginTop: '0.5rem',
+                paddingTop: '0.5rem',
+                borderTop: '1px solid #e5e7eb',
+                textAlign: 'center',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                color: '#374151'
+              }}>
+                S/ {parseFloat(costoServicio || '0').toFixed(2)}
+              </div>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '0.75rem',
+            borderTop: '1px solid #e5e7eb',
+            paddingTop: '1rem'
+          }}>
+            <button
+              type="button"
+              onClick={() => {
+                setModalEquipoAbierto(false)
+                resetearFormularioEquipo()
+                setEquipoIndex(null)
+              }}
+              style={{
+                padding: '0.65rem 1rem',
+                backgroundColor: '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '0.85rem'
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={guardarEquipo}
+              style={{
+                padding: '0.65rem 1rem',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '0.85rem'
+              }}
+            >
+              {equipoIndex !== null ? '✏️ Guardar' : '➕ Agregar'}
+            </button>
           </div>
         </div>
       </Modal>

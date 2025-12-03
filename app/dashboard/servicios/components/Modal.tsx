@@ -8,20 +8,24 @@ interface ModalProps {
   title: string
   children: ReactNode
   maxHeight?: string  // ✅ NUEVO - permite ajustar altura
+  closeOnBackdrop?: boolean  // ✅ NUEVO - permite desactivar cierre al hacer click fuera
+  zIndex?: number  // ✅ NUEVO - permite ajustar z-index para modales anidados
 }
 
-export default function Modal({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
-  maxHeight = '80vh'  // ✅ DEFAULT 80vh, pero se puede cambiar
+export default function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  maxHeight = '80vh',  // ✅ DEFAULT 80vh, pero se puede cambiar
+  closeOnBackdrop = false,  // ✅ DEFAULT false - NO cierra al hacer click fuera
+  zIndex = 1000  // ✅ DEFAULT 1000, pero se puede aumentar para modales anidados
 }: ModalProps) {
   if (!isOpen) return null
 
   return (
     <div
-      onClick={onClose}
+      onClick={() => closeOnBackdrop && onClose()}
       style={{
         position: 'fixed',
         top: 0,
@@ -32,8 +36,9 @@ export default function Modal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 1000,
-        padding: '1rem'
+        zIndex: zIndex,
+        padding: '1rem',
+        cursor: closeOnBackdrop ? 'pointer' : 'default'
       }}
     >
       <div

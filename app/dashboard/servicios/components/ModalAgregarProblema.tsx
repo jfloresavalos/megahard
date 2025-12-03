@@ -14,6 +14,9 @@ interface ModalAgregarProblemaProps {
   problemas: Problema[]
   onSeleccionar: (problema: Problema) => void
   onCrearNuevo: () => void
+  onEditar?: (problema: Problema) => void
+  onEliminar?: (problemaId: string) => void
+  zIndex?: number
 }
 
 export default function ModalAgregarProblema({
@@ -21,7 +24,10 @@ export default function ModalAgregarProblema({
   onClose,
   problemas,
   onSeleccionar,
-  onCrearNuevo
+  onCrearNuevo,
+  onEditar,
+  onEliminar,
+  zIndex = 1000
 }: ModalAgregarProblemaProps) {
   const [busqueda, setBusqueda] = useState('')
 
@@ -53,7 +59,7 @@ export default function ModalAgregarProblema({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 1000,
+        zIndex: zIndex,
         padding: '1rem'
       }}
     >
@@ -173,7 +179,11 @@ export default function ModalAgregarProblema({
                     borderRadius: '8px',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
-                    backgroundColor: 'white'
+                    backgroundColor: 'white',
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto',
+                    gap: '1rem',
+                    alignItems: 'center'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = '#3b82f6'
@@ -188,23 +198,97 @@ export default function ModalAgregarProblema({
                     e.currentTarget.style.boxShadow = 'none'
                   }}
                 >
-                  <div style={{
-                    fontSize: '1rem',
-                    fontWeight: '600',
-                    color: '#111827',
-                    marginBottom: problema.descripcion ? '0.5rem' : 0
-                  }}>
-                    {problema.nombre}
-                  </div>
-                  {problema.descripcion && (
+                  <div>
                     <div style={{
-                      fontSize: '0.875rem',
-                      color: '#6b7280',
-                      lineHeight: '1.4'
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: '#111827',
+                      marginBottom: problema.descripcion ? '0.5rem' : 0
                     }}>
-                      {problema.descripcion}
+                      {problema.nombre}
                     </div>
-                  )}
+                    {problema.descripcion && (
+                      <div style={{
+                        fontSize: '0.875rem',
+                        color: '#6b7280',
+                        lineHeight: '1.4'
+                      }}>
+                        {problema.descripcion}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.3rem', flexShrink: 0 }}>
+                    {onEditar && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onEditar(problema)
+                        }}
+                        title="Editar problema"
+                        style={{
+                          padding: '0.25rem 0.4rem',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem',
+                          transition: 'all 0.2s',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: '24px',
+                          height: '24px'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#2563eb'
+                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#3b82f6'
+                          e.currentTarget.style.boxShadow = 'none'
+                        }}
+                      >
+                        ✏️
+                      </button>
+                    )}
+                    {onEliminar && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (confirm(`¿Eliminar problema "${problema.nombre}"?`)) {
+                            onEliminar(problema.id)
+                          }
+                        }}
+                        title="Eliminar problema"
+                        style={{
+                          padding: '0.25rem 0.4rem',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem',
+                          transition: 'all 0.2s',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: '24px',
+                          height: '24px'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#dc2626'
+                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#ef4444'
+                          e.currentTarget.style.boxShadow = 'none'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
 

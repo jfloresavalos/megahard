@@ -15,6 +15,8 @@ interface ModalAgregarServicioProps {
   servicios: Servicio[]
   onSeleccionar: (servicio: Servicio) => void
   onCrearNuevo: () => void
+  onEditar?: (servicio: Servicio) => void
+  onEliminar?: (servicioId: string) => void
 }
 
 export default function ModalAgregarServicio({
@@ -22,7 +24,9 @@ export default function ModalAgregarServicio({
   onClose,
   servicios,
   onSeleccionar,
-  onCrearNuevo
+  onCrearNuevo,
+  onEditar,
+  onEliminar
 }: ModalAgregarServicioProps) {
   const [busqueda, setBusqueda] = useState('')
 
@@ -167,61 +171,124 @@ export default function ModalAgregarServicio({
               {serviciosAMostrar.map((servicio) => (
                 <div
                   key={servicio.id}
-                  onClick={() => handleSeleccionar(servicio)}
                   style={{
                     padding: '1rem 1.25rem',
                     border: '2px solid #e5e7eb',
                     borderRadius: '8px',
-                    cursor: 'pointer',
                     transition: 'all 0.2s',
-                    backgroundColor: 'white'
+                    backgroundColor: 'white',
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto',
+                    alignItems: 'center',
+                    gap: '1rem'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = '#3b82f6'
                     e.currentTarget.style.backgroundColor = '#eff6ff'
-                    e.currentTarget.style.transform = 'translateY(-2px)'
                     e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)'
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = '#e5e7eb'
                     e.currentTarget.style.backgroundColor = 'white'
-                    e.currentTarget.style.transform = 'translateY(0)'
                     e.currentTarget.style.boxShadow = 'none'
                   }}
                 >
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    gap: '1rem',
-                    marginBottom: servicio.descripcion ? '0.5rem' : 0
-                  }}>
+                  <div
+                    onClick={() => handleSeleccionar(servicio)}
+                    style={{
+                      cursor: 'pointer'
+                    }}
+                  >
                     <div style={{
-                      fontSize: '1rem',
-                      fontWeight: '600',
-                      color: '#111827',
-                      flex: 1
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      gap: '1rem',
+                      marginBottom: servicio.descripcion ? '0.5rem' : 0
                     }}>
-                      {servicio.nombre}
+                      <div style={{
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        color: '#111827',
+                        flex: 1
+                      }}>
+                        {servicio.nombre}
+                      </div>
+                      <div style={{
+                        fontSize: '1.125rem',
+                        fontWeight: '700',
+                        color: '#10b981',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        S/ {Number(servicio.precioSugerido).toFixed(2)}
+                      </div>
                     </div>
-                    <div style={{
-                      fontSize: '1.125rem',
-                      fontWeight: '700',
-                      color: '#10b981',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      S/ {Number(servicio.precioSugerido).toFixed(2)}
-                    </div>
+                    {servicio.descripcion && (
+                      <div style={{
+                        fontSize: '0.875rem',
+                        color: '#6b7280',
+                        lineHeight: '1.4'
+                      }}>
+                        {servicio.descripcion}
+                      </div>
+                    )}
                   </div>
-                  {servicio.descripcion && (
-                    <div style={{
-                      fontSize: '0.875rem',
-                      color: '#6b7280',
-                      lineHeight: '1.4'
-                    }}>
-                      {servicio.descripcion}
-                    </div>
-                  )}
+                  <div style={{ display: 'flex', gap: '0.3rem' }}>
+                    {onEditar && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onEditar(servicio)
+                        }}
+                        title="Editar servicio"
+                        style={{
+                          padding: '0.25rem 0.4rem',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          transition: 'background-color 0.2s',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                      >
+                        ✏️
+                      </button>
+                    )}
+                    {onEliminar && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (confirm(`¿Eliminar servicio "${servicio.nombre}"?`)) {
+                            onEliminar(servicio.id)
+                          }
+                        }}
+                        title="Eliminar servicio"
+                        style={{
+                          padding: '0.25rem 0.4rem',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          transition: 'background-color 0.2s',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
 

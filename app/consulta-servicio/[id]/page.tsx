@@ -338,49 +338,6 @@ export default function DetalleServicioPublicoPage() {
           </div>
         </div>
 
-        {/* Problema reportado */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '16px',
-          padding: '1.5rem',
-          marginBottom: '1.5rem',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-        }}>
-          <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.25rem', fontWeight: '700' }}>🔧 Problema Reportado</h3>
-          <p style={{ margin: 0, lineHeight: '1.6', color: '#374151' }}>
-            {servicio.descripcionProblema || 'No especificado'}
-          </p>
-        </div>
-
-        {/* Diagnóstico y Solución (solo si está reparado o entregado) */}
-        {servicio.diagnostico && servicio.solucion && (
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '16px',
-            padding: '1.5rem',
-            marginBottom: '1.5rem',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-          }}>
-            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.25rem', fontWeight: '700' }}>✅ Diagnóstico y Solución</h3>
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '0.5rem', fontWeight: '600' }}>
-                Diagnóstico:
-              </div>
-              <p style={{ margin: 0, lineHeight: '1.6', color: '#374151' }}>
-                {servicio.diagnostico}
-              </p>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '0.5rem', fontWeight: '600' }}>
-                Solución aplicada:
-              </div>
-              <p style={{ margin: 0, lineHeight: '1.6', color: '#374151' }}>
-                {servicio.solucion}
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* Historial */}
         {historial.length > 0 && (
           <div style={{
@@ -421,14 +378,9 @@ export default function DetalleServicioPublicoPage() {
                     <div style={{ fontWeight: '700', color: '#1f2937', marginBottom: '0.25rem' }}>
                       {obtenerIconoEstado(item.estadoNuevo)} {item.estadoNuevo.replace(/_/g, ' ')}
                     </div>
-                    <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                       {formatearFecha(item.fecha)}
                     </div>
-                    {item.comentario && (
-                      <div style={{ fontSize: '0.875rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-                        {item.comentario}
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}

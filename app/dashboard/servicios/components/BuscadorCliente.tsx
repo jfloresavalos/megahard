@@ -35,10 +35,20 @@ export default function BuscadorCliente({
 }: BuscadorClienteProps) {
   const [isMobile, setIsMobile] = useState(false)
   const [busquedaDni, setBusquedaDni] = useState('')
-  const [tipoDocBusqueda, setTipoDocBusqueda] = useState('DNI')
+  const [tipoDocBusqueda, setTipoDocBusqueda] = useState('NOMBRE')
   const [buscando, setBuscando] = useState(false)
   const [clienteEncontrado, setClienteEncontrado] = useState(false)
   const [mensaje, setMensaje] = useState('')
+  const [clientesEncontrados, setClientesEncontrados] = useState<Cliente[]>([])
+  const [mostrarListaClientes, setMostrarListaClientes] = useState(false)
+
+  // ✅ Detectar cuando hay datos del cliente precargados (al editar servicio)
+  useEffect(() => {
+    if (clienteNombre && clienteDni && clienteCelular) {
+      setClienteEncontrado(true)
+      setBusquedaDni(clienteDni)
+    }
+  }, [clienteNombre, clienteDni, clienteCelular])
   const [mostrarModalCrear, setMostrarModalCrear] = useState(false)
   const [nuevoCliente, setNuevoCliente] = useState({
     tipoDoc: 'DNI',
@@ -61,75 +71,87 @@ export default function BuscadorCliente({
 
   const buscarCliente = async () => {
     if (!busquedaDni.trim()) {
-      setMensaje('⚠️ Ingrese un número de documento')
+      setMensaje('⚠️ Ingrese un término de búsqueda')
       setTimeout(() => setMensaje(''), 3000)
       return
     }
 
-    const numeroDoc = busquedaDni.trim()
+    const busqueda = busquedaDni.trim()
 
-    // Validar formato según tipo de documento
-    if (tipoDocBusqueda === 'DNI') {
-      if (!/^\d{8}$/.test(numeroDoc)) {
-        setMensaje('⚠️ El DNI debe tener exactamente 8 dígitos')
-        setTimeout(() => setMensaje(''), 3000)
-        return
-      }
-    } else if (tipoDocBusqueda === 'RUC') {
-      if (!/^\d{11}$/.test(numeroDoc)) {
-        setMensaje('⚠️ El RUC debe tener exactamente 11 dígitos')
-        setTimeout(() => setMensaje(''), 3000)
-        return
-      }
-    } else if (tipoDocBusqueda === 'CE') {
-      if (!/^\d{9}$/.test(numeroDoc)) {
-        setMensaje('⚠️ El CE debe tener exactamente 9 dígitos')
-        setTimeout(() => setMensaje(''), 3000)
-        return
-      }
-    } else if (tipoDocBusqueda === 'PASAPORTE') {
-      if (!/^[A-Za-z0-9]{7,12}$/.test(numeroDoc)) {
-        setMensaje('⚠️ El Pasaporte debe tener entre 7 y 12 caracteres alfanuméricos')
-        setTimeout(() => setMensaje(''), 3000)
-        return
+    // Si es búsqueda por NOMBRE, no validar formato
+    if (tipoDocBusqueda !== 'NOMBRE') {
+      // Validar formato según tipo de documento
+      if (tipoDocBusqueda === 'DNI') {
+        if (!/^\d{8}$/.test(busqueda)) {
+          setMensaje('⚠️ El DNI debe tener exactamente 8 dígitos')
+          setTimeout(() => setMensaje(''), 3000)
+          return
+        }
+      } else if (tipoDocBusqueda === 'RUC') {
+        if (!/^\d{11}$/.test(busqueda)) {
+          setMensaje('⚠️ El RUC debe tener exactamente 11 dígitos')
+          setTimeout(() => setMensaje(''), 3000)
+          return
+        }
+      } else if (tipoDocBusqueda === 'CE') {
+        if (!/^\d{9}$/.test(busqueda)) {
+          setMensaje('⚠️ El CE debe tener exactamente 9 dígitos')
+          setTimeout(() => setMensaje(''), 3000)
+          return
+        }
+      } else if (tipoDocBusqueda === 'PASAPORTE') {
+        if (!/^[A-Za-z0-9]{7,12}$/.test(busqueda)) {
+          setMensaje('⚠️ El Pasaporte debe tener entre 7 y 12 caracteres alfanuméricos')
+          setTimeout(() => setMensaje(''), 3000)
+          return
+        }
       }
     }
 
     setBuscando(true)
     setMensaje('')
+    setMostrarListaClientes(false)
 
     try {
-      console.log('🔍 Buscando cliente:', { numeroDoc, tipoDoc: tipoDocBusqueda })
+      let url = ''
+      if (tipoDocBusqueda === 'NOMBRE') {
+        console.log('🔍 Buscando cliente por nombre:', busqueda)
+        url = `/api/clientes/buscar?nombre=${encodeURIComponent(busqueda)}`
+      } else {
+        console.log('🔍 Buscando cliente por documento:', { numeroDoc: busqueda, tipoDoc: tipoDocBusqueda })
+        url = `/api/clientes/buscar?numeroDoc=${encodeURIComponent(busqueda)}&tipoDoc=${tipoDocBusqueda}`
+      }
 
-      const response = await fetch(`/api/clientes/buscar?numeroDoc=${encodeURIComponent(numeroDoc)}&tipoDoc=${tipoDocBusqueda}`)
+      const response = await fetch(url)
       const data = await response.json()
 
       console.log('📦 Respuesta:', data)
 
-      if (data.success && data.cliente) {
-        const cliente = data.cliente
-
-        // Llenar los datos
-        onClienteSeleccionado(cliente)
-        onCambioNombre(cliente.nombre)
-        onCambioDni(cliente.numeroDoc)
-        onCambioCelular(cliente.telefono || '')
-        if (onCambioTipoDoc) {
-          onCambioTipoDoc(cliente.tipoDoc)
+      // Si es búsqueda por nombre, puede devolver múltiples clientes
+      if (tipoDocBusqueda === 'NOMBRE' && data.success && data.clientes) {
+        if (data.clientes.length === 1) {
+          // Solo un cliente encontrado, seleccionarlo automáticamente
+          const cliente = data.clientes[0]
+          seleccionarCliente(cliente)
+        } else {
+          // Múltiples clientes encontrados, mostrar lista
+          setClientesEncontrados(data.clientes)
+          setMostrarListaClientes(true)
+          setMensaje(`✅ ${data.clientes.length} cliente(s) encontrado(s). Seleccione uno.`)
+          setTimeout(() => setMensaje(''), 5000)
         }
-
-        setClienteEncontrado(true)
-        setMensaje('✅ Cliente encontrado en el sistema')
-
-        setTimeout(() => setMensaje(''), 3000)
+      } else if (data.success && data.cliente) {
+        // Búsqueda por documento - un solo resultado
+        seleccionarCliente(data.cliente)
       } else {
         setMensaje('⚠️ Cliente no encontrado. Complete los datos manualmente para registrarlo.')
         setClienteEncontrado(false)
-        onCambioDni(numeroDoc)
-        if (onCambioTipoDoc) {
-          onCambioTipoDoc(tipoDocBusqueda)
+        if (tipoDocBusqueda !== 'NOMBRE') {
+          onCambioDni(busqueda)
+          if (onCambioTipoDoc) {
+            onCambioTipoDoc(tipoDocBusqueda)
+          }
         }
-
         setTimeout(() => setMensaje(''), 5000)
       }
     } catch (error) {
@@ -141,6 +163,22 @@ export default function BuscadorCliente({
     }
   }
 
+  const seleccionarCliente = (cliente: Cliente) => {
+    onClienteSeleccionado(cliente)
+    onCambioNombre(cliente.nombre)
+    onCambioDni(cliente.numeroDoc)
+    onCambioCelular(cliente.telefono || '')
+    if (onCambioTipoDoc) {
+      onCambioTipoDoc(cliente.tipoDoc)
+    }
+
+    setClienteEncontrado(true)
+    setMostrarListaClientes(false)
+    setClientesEncontrados([])
+    setMensaje('✅ Cliente seleccionado correctamente')
+    setTimeout(() => setMensaje(''), 3000)
+  }
+
   const limpiarCliente = () => {
     onClienteSeleccionado(null)
     onCambioNombre('')
@@ -149,6 +187,8 @@ export default function BuscadorCliente({
     setBusquedaDni('')
     setClienteEncontrado(false)
     setMensaje('')
+    setClientesEncontrados([])
+    setMostrarListaClientes(false)
   }
 
   const validarDocumento = (valor: string, tipo: string) => {
@@ -177,6 +217,7 @@ export default function BuscadorCliente({
     if (tipoDocBusqueda === 'RUC') return 11
     if (tipoDocBusqueda === 'CE') return 9
     if (tipoDocBusqueda === 'PASAPORTE') return 12
+    if (tipoDocBusqueda === 'NOMBRE') return 100
     return 12
   }
 
@@ -185,11 +226,15 @@ export default function BuscadorCliente({
     if (tipoDocBusqueda === 'RUC') return 'Ingrese RUC (11 dígitos)...'
     if (tipoDocBusqueda === 'CE') return 'Ingrese CE (9 dígitos)...'
     if (tipoDocBusqueda === 'PASAPORTE') return 'Ingrese Pasaporte (7-12 caracteres)...'
-    return 'Ingrese número de documento...'
+    if (tipoDocBusqueda === 'NOMBRE') return 'Ingrese nombre del cliente...'
+    return 'Ingrese término de búsqueda...'
   }
 
   const handleChangeBusqueda = (valor: string) => {
-    if (tipoDocBusqueda === 'PASAPORTE') {
+    if (tipoDocBusqueda === 'NOMBRE') {
+      // Para nombre, permitir cualquier carácter
+      setBusquedaDni(valor.slice(0, 100))
+    } else if (tipoDocBusqueda === 'PASAPORTE') {
       setBusquedaDni(valor.replace(/[^A-Za-z0-9]/g, '').slice(0, 12))
     } else {
       setBusquedaDni(valor.replace(/\D/g, '').slice(0, getMaxLength()))
@@ -331,6 +376,8 @@ export default function BuscadorCliente({
               onChange={(e) => {
                 setTipoDocBusqueda(e.target.value)
                 setBusquedaDni('')
+                setMostrarListaClientes(false)
+                setClientesEncontrados([])
               }}
               disabled={clienteEncontrado}
               style={{
@@ -345,6 +392,7 @@ export default function BuscadorCliente({
                 cursor: clienteEncontrado ? 'not-allowed' : 'pointer'
               }}
             >
+              <option value="NOMBRE">Nombre</option>
               <option value="DNI">DNI</option>
               <option value="RUC">RUC</option>
               <option value="CE">CE</option>
@@ -476,6 +524,7 @@ export default function BuscadorCliente({
           paddingLeft: isMobile ? '0' : '185px',
           textAlign: isMobile ? 'center' : 'left'
         }}>
+          {tipoDocBusqueda === 'NOMBRE' && 'Buscar por nombre (puede devolver múltiples resultados)'}
           {tipoDocBusqueda === 'DNI' && 'DNI: 8 dígitos numéricos'}
           {tipoDocBusqueda === 'RUC' && 'RUC: 11 dígitos numéricos'}
           {tipoDocBusqueda === 'CE' && 'CE: 9 dígitos numéricos'}
@@ -500,6 +549,74 @@ export default function BuscadorCliente({
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
           }}>
             {mensaje}
+          </div>
+        )}
+
+        {/* Lista de clientes encontrados (búsqueda por nombre) */}
+        {mostrarListaClientes && clientesEncontrados.length > 0 && (
+          <div style={{
+            marginTop: isMobile ? '0.75rem' : '1rem',
+            backgroundColor: 'white',
+            borderRadius: isMobile ? '6px' : '8px',
+            border: '2px solid #3b82f6',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            maxHeight: '400px',
+            overflowY: 'auto'
+          }}>
+            <div style={{
+              padding: isMobile ? '0.75rem' : '1rem',
+              borderBottom: '1px solid #e5e7eb',
+              backgroundColor: '#f8fafc',
+              fontWeight: '700',
+              fontSize: isMobile ? '0.85rem' : '0.95rem',
+              color: '#1f2937'
+            }}>
+              Seleccione un cliente:
+            </div>
+            {clientesEncontrados.map((cliente) => (
+              <button
+                key={cliente.id}
+                type="button"
+                onClick={() => seleccionarCliente(cliente)}
+                style={{
+                  width: '100%',
+                  padding: isMobile ? '0.75rem' : '1rem',
+                  borderBottom: '1px solid #e5e7eb',
+                  backgroundColor: 'white',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s',
+                  border: 'none',
+                  display: 'block'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f9ff'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+              >
+                <div style={{
+                  fontSize: isMobile ? '0.9rem' : '1rem',
+                  fontWeight: '600',
+                  color: '#1f2937',
+                  marginBottom: '0.25rem'
+                }}>
+                  {cliente.nombre}
+                </div>
+                <div style={{
+                  fontSize: isMobile ? '0.75rem' : '0.85rem',
+                  color: '#6b7280',
+                  display: 'flex',
+                  gap: '0.5rem',
+                  flexWrap: 'wrap'
+                }}>
+                  <span><strong>{cliente.tipoDoc}:</strong> {cliente.numeroDoc}</span>
+                  {cliente.telefono && (
+                    <>
+                      <span>•</span>
+                      <span><strong>Tel:</strong> {cliente.telefono}</span>
+                    </>
+                  )}
+                </div>
+              </button>
+            ))}
           </div>
         )}
 

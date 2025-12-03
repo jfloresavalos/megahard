@@ -54,6 +54,7 @@ interface Equipo {
   marcaModelo: string
   descripcionEquipo: string
   dejoSinCargador: boolean
+  conCargador: boolean
   dejoAccesorios: boolean
   esCotizacion: boolean
   problemasSeleccionados: ProblemaSeleccionado[]
@@ -86,6 +87,8 @@ export default function NuevoServicioPage() {
 
   // Nuevo problema/servicio
   const [nuevoProblema, setNuevoProblema] = useState('')
+  const [nuevoProblemaTexto, setNuevoProblemaTexto] = useState('')
+  const [nuevoProblemaDescripcion, setNuevoProblemaDescripcion] = useState('')
   const [nuevoServicioNombre, setNuevoServicioNombre] = useState('')
   const [nuevoServicioPrecio, setNuevoServicioPrecio] = useState('0')
 
@@ -109,6 +112,7 @@ export default function NuevoServicioPage() {
 
   // Recepción
   const [dejoSinCargador, setDejoSinCargador] = useState(false)
+  const [conCargador, setConCargador] = useState(false) // ✅ Estado separado para "Con cargador"
   const [dejoAccesorios, setDejoAccesorios] = useState(false)
   const [esCotizacion, setEsCotizacion] = useState(false)
 
@@ -126,6 +130,7 @@ export default function NuevoServicioPage() {
   const [serviciosAdicionales, setServiciosAdicionales] = useState<ServicioSeleccionado[]>([])
   const [metodoPago, setMetodoPago] = useState('')
   const [aCuenta, setACuenta] = useState('0')
+  const [dejaAdelanto, setDejaAdelanto] = useState(false)
 
   // Otros
   const [fechaEstimada, setFechaEstimada] = useState(() => {
@@ -154,6 +159,7 @@ export default function NuevoServicioPage() {
     setMarcaEquipo('')
     setDescripcionEquipo('')
     setDejoSinCargador(false)
+    setConCargador(false) // ✅ Resetear "Con cargador"
     setDejoAccesorios(false)
     setEsCotizacion(false)
     setProblemasSeleccionados([])
@@ -188,9 +194,10 @@ export default function NuevoServicioPage() {
     const nuevoEquipo: Equipo = {
       id: equipoIndex !== null ? equipos[equipoIndex].id : `equipo-${Date.now()}`,
       tipoEquipo,
-      marcaModelo: marcaEquipo,
+      marcaModelo: `${marcaEquipo} ${descripcionEquipo}`.trim(),
       descripcionEquipo,
-      dejoSinCargador,
+      dejoSinCargador: dejoSinCargador, // ✅ Guardar directamente
+      conCargador: conCargador, // ✅ Guardar "Con cargador"
       dejoAccesorios,
       esCotizacion,
       problemasSeleccionados,
@@ -199,7 +206,7 @@ export default function NuevoServicioPage() {
       tieneAranaduras,
       otrosDetalles,
       costoServicio: parseFloat(costoServicio),
-      fotos: previsualizaciones // URLs ya subidas
+      fotos: [] // Las fotos son a nivel de servicio, no por equipo
     }
 
     if (equipoIndex !== null) {
@@ -220,9 +227,15 @@ export default function NuevoServicioPage() {
   const editarEquipo = (index: number) => {
     const equipo = equipos[index]
     setTipoEquipo(equipo.tipoEquipo)
-    setMarcaEquipo(equipo.marcaModelo)
-    setDescripcionEquipo(equipo.descripcionEquipo)
+    // Separar marca y modelo del campo marcaModelo
+    const partes = equipo.marcaModelo.split(' ')
+    setMarcaEquipo(partes[0] || '')
+    setDescripcionEquipo(partes.slice(1).join(' ') || equipo.descripcionEquipo)
+
+    // ✅ Cargar valores exactos como fueron guardados
     setDejoSinCargador(equipo.dejoSinCargador)
+    setConCargador(equipo.conCargador)
+
     setDejoAccesorios(equipo.dejoAccesorios)
     setEsCotizacion(equipo.esCotizacion)
     setProblemasSeleccionados(equipo.problemasSeleccionados)
@@ -329,32 +342,70 @@ export default function NuevoServicioPage() {
   }
 
   const crearNuevoProblema = async () => {
-    if (!nuevoProblema.trim()) {
+    if (!nuevoProblemaTexto.trim()) {
       alert('Ingrese el nombre del problema')
       return
     }
 
     try {
-      const response = await fetch('/api/problemas-comunes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: nuevoProblema })
-      })
+      // Verificar si es edición de catálogo
+      const problemaEditId = sessionStorage.getItem('problemaEditId')
+      
+      if (problemaEditId !== null) {
+        // EDITAR problema del catálogo
+        const response = await fetch(`/api/problemas-comunes/${problemaEditId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre: nuevoProblemaTexto,
+            descripcion: nuevoProblemaDescripcion || null
+          })
+        })
 
-      const data = await response.json()
+        const data = await response.json()
 
-      if (data.success) {
-        setProblemasDisponibles([...problemasDisponibles, data.problema])
-        agregarProblema(data.problema)
-        setNuevoProblema('')
-        setModalNuevoProblema(false)
-        alert('✅ Problema agregado al catálogo')
+        if (data.success) {
+          // Actualizar en el listado disponible
+          setProblemasDisponibles(problemasDisponibles.map(p => 
+            p.id === problemaEditId 
+              ? { ...p, nombre: nuevoProblemaTexto, descripcion: nuevoProblemaDescripcion }
+              : p
+          ))
+          setNuevoProblemaTexto('')
+          setNuevoProblemaDescripcion('')
+          sessionStorage.removeItem('problemaEditId')
+          setModalNuevoProblema(false)
+          alert('✅ Problema actualizado en el catálogo')
+        } else {
+          alert('❌ ' + (data.error || 'Error al actualizar'))
+        }
       } else {
-        alert('❌ ' + data.error)
+        // CREAR nuevo problema
+        const response = await fetch('/api/problemas-comunes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            nombre: nuevoProblemaTexto,
+            descripcion: nuevoProblemaDescripcion || null
+          })
+        })
+
+        const data = await response.json()
+
+        if (data.success) {
+          setProblemasDisponibles([...problemasDisponibles, data.problema])
+          agregarProblema(data.problema)
+          setNuevoProblemaTexto('')
+          setNuevoProblemaDescripcion('')
+          setModalNuevoProblema(false)
+          alert('✅ Problema agregado al catálogo')
+        } else {
+          alert('❌ ' + data.error)
+        }
       }
     } catch (error) {
       console.error('Error:', error)
-      alert('Error al crear problema')
+      alert('Error al crear/actualizar problema')
     }
   }
 
@@ -373,6 +424,68 @@ export default function NuevoServicioPage() {
       return
     }
 
+    // Verificar si es edición de catálogo
+    const servicioEditId = sessionStorage.getItem('servicioEditId')
+    
+    if (servicioEditId !== null) {
+      // EDITAR servicio del catálogo
+      try {
+        const response = await fetch(`/api/servicios-adicionales/${servicioEditId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre: nuevoServicioNombre,
+            precioSugerido: parseFloat(nuevoServicioPrecio) || 0
+          })
+        })
+
+        const data = await response.json()
+
+        if (data.success) {
+          // Actualizar en servicios disponibles
+          const updatedServicios = serviciosDisponibles.map(s =>
+            s.id === servicioEditId
+              ? { ...s, nombre: nuevoServicioNombre, precioSugerido: parseFloat(nuevoServicioPrecio) || 0 }
+              : s
+          )
+          setServiciosDisponibles(updatedServicios)
+          sessionStorage.removeItem('servicioEditId')
+          setNuevoServicioNombre('')
+          setNuevoServicioPrecio('0')
+          setModalNuevoServicio(false)
+          alert('✅ Servicio actualizado en el catálogo')
+        } else {
+          alert('❌ ' + (data.error || 'Error al actualizar'))
+        }
+      } catch (error) {
+        console.error('Error:', error)
+        alert('Error al actualizar servicio')
+      }
+      return
+    }
+
+    // Verificar si es edición de servicio en la forma
+    const servicioEditIndex = sessionStorage.getItem('servicioEditIndex')
+    
+    if (servicioEditIndex !== null) {
+      // EDITAR servicio existente en la forma
+      const index = parseInt(servicioEditIndex)
+      const nuevos = [...serviciosAdicionales]
+      nuevos[index] = {
+        ...nuevos[index],
+        nombre: nuevoServicioNombre,
+        precio: parseFloat(nuevoServicioPrecio) || 0
+      }
+      setServiciosAdicionales(nuevos)
+      sessionStorage.removeItem('servicioEditIndex')
+      setNuevoServicioNombre('')
+      setNuevoServicioPrecio('0')
+      setModalNuevoServicio(false)
+      alert('✅ Servicio actualizado')
+      return
+    }
+
+    // CREAR nuevo servicio
     try {
       const response = await fetch('/api/servicios-adicionales', {
         method: 'POST',
@@ -386,8 +499,14 @@ export default function NuevoServicioPage() {
       const data = await response.json()
 
       if (data.success) {
+        // Agregar a servicios disponibles
         setServiciosDisponibles([...serviciosDisponibles, data.servicio])
-        agregarServicioAdicional(data.servicio)
+        // Agregar a la lista local de servicios adicionales
+        setServiciosAdicionales([...serviciosAdicionales, {
+          id: data.servicio.id,
+          nombre: data.servicio.nombre,
+          precio: Number(data.servicio.precioSugerido || 0)
+        }])
         setNuevoServicioNombre('')
         setNuevoServicioPrecio('0')
         setModalNuevoServicio(false)
@@ -411,9 +530,67 @@ export default function NuevoServicioPage() {
     setServiciosAdicionales(nuevos)
   }
 
+  const handleEditarServicioCatalogo = (servicio: any) => {
+    // Abrir modal para editar servicio del catálogo
+    setNuevoServicioNombre(servicio.nombre)
+    setNuevoServicioPrecio(servicio.precioSugerido?.toString() || '0')
+    sessionStorage.setItem('servicioEditId', servicio.id)
+    setModalNuevoServicio(true)
+  }
+
+  const handleEliminarServicioCatalogo = async (servicioId: string) => {
+    try {
+      const response = await fetch(`/api/servicios-adicionales/${servicioId}`, {
+        method: 'DELETE'
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Eliminar del listado disponible
+        setServiciosDisponibles(serviciosDisponibles.filter(s => s.id !== servicioId))
+        alert('✅ Servicio eliminado del catálogo')
+      } else {
+        alert('❌ ' + (data.error || 'Error al eliminar'))
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      alert('Error al eliminar servicio')
+    }
+  }
+
+  const handleEditarProblema = (problema: any) => {
+    // Abrir modal para editar problema del catálogo
+    setNuevoProblemaTexto(problema.nombre)
+    setNuevoProblemaDescripcion(problema.descripcion || '')
+    sessionStorage.setItem('problemaEditId', problema.id)
+    setModalNuevoProblema(true)
+  }
+
+  const handleEliminarProblema = async (problemaId: string) => {
+    try {
+      const response = await fetch(`/api/problemas-comunes/${problemaId}`, {
+        method: 'DELETE'
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Eliminar del listado disponible
+        setProblemasDisponibles(problemasDisponibles.filter(p => p.id !== problemaId))
+        alert('✅ Problema eliminado del catálogo')
+      } else {
+        alert('❌ ' + (data.error || 'Error al eliminar'))
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      alert('Error al eliminar problema')
+    }
+  }
+
   const handleSeleccionarFotos = (e: React.ChangeEvent<HTMLInputElement>) => {
     const archivos = Array.from(e.target.files || [])
-    
+
     // Validar máximo 5 fotos
     if (fotos.length + archivos.length > 5) {
       alert('⚠️ Máximo 5 fotos permitidas')
@@ -430,20 +607,10 @@ export default function NuevoServicioPage() {
     })
 
     setFotos([...fotos, ...archivosValidos])
-
-    // Crear previsualizaciones
-    archivosValidos.forEach(archivo => {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPrevisualizaciones(prev => [...prev, reader.result as string])
-      }
-      reader.readAsDataURL(archivo)
-    })
   }
 
   const eliminarFoto = (index: number) => {
     setFotos(fotos.filter((_, i) => i !== index))
-    setPrevisualizaciones(previsualizaciones.filter((_, i) => i !== index))
   }
 
   const subirFotos = async (): Promise<string[]> => {
@@ -479,9 +646,10 @@ export default function NuevoServicioPage() {
   }
 
   const calcularTotal = () => {
-    const costoServ = parseFloat(costoServicio) || 0
+    // Sumar costos de todos los equipos
+    const costoEquipos = equipos.reduce((sum, eq) => sum + (eq.costoServicio || 0), 0)
     const costoAdicionales = serviciosAdicionales.reduce((sum, s) => sum + s.precio, 0)
-    return costoServ + costoAdicionales
+    return costoEquipos + costoAdicionales
   }
 
   const calcularSaldo = () => {
@@ -539,15 +707,38 @@ export default function NuevoServicioPage() {
     setLoading(true)
 
     try {
-      // Subir fotos de los equipos que las tienen
-      const equiposConFotos = await Promise.all(
-        equipos.map(async (equipo) => {
-          return {
-            ...equipo,
-            fotos: equipo.fotos // Ya están subidas, solo pasar las URLs
+      // Subir fotos del servicio
+      console.log('📸 Fotos a subir:', fotos.length)
+      let fotosUrls: string[] = []
+
+      if (fotos.length > 0) {
+        setSubiendoFotos(true)
+        try {
+          for (const foto of fotos) {
+            const formData = new FormData()
+            formData.append('file', foto)
+
+            const response = await fetch('/api/upload', {
+              method: 'POST',
+              body: formData
+            })
+
+            const data = await response.json()
+            console.log('📤 Respuesta upload:', data)
+            if (data.success) {
+              fotosUrls.push(data.url)
+            }
           }
-        })
-      )
+        } catch (error) {
+          console.error('Error al subir fotos:', error)
+          alert('Error al subir algunas fotos')
+        } finally {
+          setSubiendoFotos(false)
+        }
+      }
+
+      console.log('📦 Equipos a enviar:', equipos)
+      console.log('📸 URLs de fotos:', fotosUrls)
 
       const response = await fetch('/api/servicios', {
         method: 'POST',
@@ -559,16 +750,15 @@ export default function NuevoServicioPage() {
           clienteCelular,
           tecnicoId,
           sedeId,
-          // ✅ ENVIAR ARRAY DE EQUIPOS
-          equipos: equiposConFotos,
-          // Datos generales del servicio
+          equipos: equipos,
+          fotosServicio: fotosUrls, // Fotos a nivel de servicio
           tipoServicioForm,
           direccionServicio: tipoServicioForm === 'DOMICILIO' ? direccionServicio : null,
           serviciosAdicionales,
-          metodoPago,
+          metodoPago: dejaAdelanto ? metodoPago : null,
           fechaEstimada: fechaEstimada ? new Date(fechaEstimada + 'T00:00:00-05:00').toISOString() : null,
           garantiaDias: parseInt(garantiaDias),
-          aCuenta: parseFloat(aCuenta) || 0
+          aCuenta: dejaAdelanto ? (parseFloat(aCuenta) || 0) : 0
         })
       })
 
@@ -924,40 +1114,66 @@ export default function NuevoServicioPage() {
                     S/ {equipo.costoServicio.toFixed(2)}
                   </div>
                   
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '0.3rem' }}>
                     <button
                       type="button"
                       onClick={() => editarEquipo(index)}
+                      title="Editar equipo"
                       style={{
-                        flex: 1,
-                        padding: '0.4rem',
+                        padding: '0.25rem 0.4rem',
                         backgroundColor: '#3b82f6',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
                         cursor: 'pointer',
                         fontSize: '0.75rem',
-                        fontWeight: '600'
+                        minWidth: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#2563eb'
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#3b82f6'
+                        e.currentTarget.style.boxShadow = 'none'
                       }}
                     >
-                      ✏️ Editar
+                      ✏️
                     </button>
                     <button
                       type="button"
                       onClick={() => eliminarEquipo(index)}
+                      title="Eliminar equipo"
                       style={{
-                        flex: 1,
-                        padding: '0.4rem',
+                        padding: '0.25rem 0.4rem',
                         backgroundColor: '#ef4444',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
                         cursor: 'pointer',
                         fontSize: '0.75rem',
-                        fontWeight: '600'
+                        minWidth: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#dc2626'
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#ef4444'
+                        e.currentTarget.style.boxShadow = 'none'
                       }}
                     >
-                      🗑️ Eliminar
+                      ✕
                     </button>
                   </div>
                 </div>
@@ -1083,7 +1299,7 @@ export default function NuevoServicioPage() {
                   key={index}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr auto auto',
+                    gridTemplateColumns: '1fr auto',
                     alignItems: 'center',
                     gap: '1rem',
                     padding: '1rem',
@@ -1091,43 +1307,278 @@ export default function NuevoServicioPage() {
                     backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb'
                   }}
                 >
-                  <div style={{ fontWeight: '500', fontSize: '0.875rem' }}>
-                    {servicio.nombre}
+                  <div>
+                    <div style={{ fontWeight: '600', fontSize: '0.95rem', marginBottom: '0.5rem' }}>
+                      {servicio.nombre}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '500' }}>
+                      <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>Precio:</span>
+                      <span style={{ fontSize: '0.95rem', color: '#10b981', fontWeight: '700' }}>
+                        S/ {servicio.precio.toFixed(2)}
+                      </span>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>S/</span>
-                    <input
-                      type="number"
-                      value={servicio.precio}
-                      onChange={(e) => actualizarPrecioServicio(index, e.target.value)}
-                      min="0"
-                      step="0.01"
-                      style={{
-                        width: '100px',
-                        padding: '0.5rem',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '4px',
-                        fontSize: '0.875rem'
+                  <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNuevoServicioNombre(servicio.nombre)
+                        setNuevoServicioPrecio(servicio.precio.toString())
+                        // Marcamos que estamos editando (guardamos el índice)
+                        setModalNuevoServicio(true)
+                        // Agregamos un atributo temporal para saber que es edición
+                        const servicioIndex = index
+                        // Guardamos en sessionStorage el índice para editarlo después
+                        sessionStorage.setItem('servicioEditIndex', servicioIndex.toString())
                       }}
-                    />
+                      title="Editar servicio"
+                      style={{
+                        padding: '0.25rem 0.4rem',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        minWidth: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#2563eb'
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#3b82f6'
+                        e.currentTarget.style.boxShadow = 'none'
+                      }}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => eliminarServicioAdicional(index)}
+                      title="Eliminar servicio"
+                      style={{
+                        padding: '0.25rem 0.4rem',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        minWidth: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#dc2626'
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#ef4444'
+                        e.currentTarget.style.boxShadow = 'none'
+                      }}
+                    >
+                      ✕
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => eliminarServicioAdicional(index)}
-                    style={{
-                      padding: '0.5rem',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    ✕
-                  </button>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* FOTOS DEL EQUIPO */}
+        <div style={{
+          backgroundColor: 'white',
+          padding: isMobile ? '0.75rem' : '1.5rem',
+          borderRadius: '8px',
+          marginBottom: isMobile ? '1rem' : '1.5rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <h2 style={{
+            fontSize: isMobile ? '0.95rem' : '1.25rem',
+            fontWeight: '600',
+            marginBottom: isMobile ? '0.75rem' : '1.5rem',
+            borderBottom: '2px solid #e5e7eb',
+            paddingBottom: isMobile ? '0.35rem' : '0.5rem'
+          }}>
+            📸 FOTOS DEL EQUIPO ({previsualizaciones.length + fotos.length}/5)
+          </h2>
+
+          {/* BOTÓN PARA SELECCIONAR FOTOS */}
+          <div style={{
+            display: 'flex',
+            gap: isMobile ? '0.5rem' : '1rem',
+            marginBottom: isMobile ? '1rem' : '1.5rem',
+            flexWrap: 'wrap'
+          }}>
+            <label style={{
+              padding: isMobile ? '0.5rem 1rem' : '0.75rem 1.5rem',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: isMobile ? '0.8rem' : '0.875rem',
+              fontWeight: '600',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+            >
+              + Agregar Fotos
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleSeleccionarFotos}
+                style={{ display: 'none' }}
+              />
+            </label>
+          </div>
+
+          {/* FOTOS EXISTENTES - Solo en edición */}
+          {equipoIndex !== null && previsualizaciones.length > 0 && (
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
+                Fotos cargadas:
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(100px, 1fr))',
+                gap: isMobile ? '0.5rem' : '1rem'
+              }}>
+                {previsualizaciones.map((foto, index) => (
+                  <div key={index} style={{
+                    position: 'relative',
+                    paddingTop: '100%',
+                    backgroundColor: '#f3f4f6',
+                    borderRadius: '6px',
+                    overflow: 'hidden',
+                    border: '2px solid #e5e7eb'
+                  }}>
+                    <img
+                      src={foto}
+                      alt={`Foto ${index + 1}`}
+                      style={{ 
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover' 
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPrevisualizaciones(previsualizaciones.filter((_, i) => i !== index))
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        width: '24px',
+                        height: '24px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        fontWeight: '600'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* FOTOS NUEVAS */}
+          {fotos.length > 0 && (
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
+                Nuevas fotos por subir:
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(100px, 1fr))',
+                gap: isMobile ? '0.5rem' : '1rem'
+              }}>
+                {fotos.map((foto, index) => (
+                  <div key={index} style={{
+                    position: 'relative',
+                    paddingTop: '100%',
+                    backgroundColor: '#f3f4f6',
+                    borderRadius: '6px',
+                    overflow: 'hidden',
+                    border: '2px solid #fbbf24'
+                  }}>
+                    <img
+                      src={URL.createObjectURL(foto)}
+                      alt={`Nueva foto ${index + 1}`}
+                      style={{ 
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover' 
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => eliminarFoto(index)}
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        width: '24px',
+                        height: '24px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        fontWeight: '600'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {previsualizaciones.length === 0 && fotos.length === 0 && (
+            <div style={{
+              padding: '2rem',
+              textAlign: 'center',
+              color: '#6b7280',
+              backgroundColor: '#f9fafb',
+              borderRadius: '6px'
+            }}>
+              <p>No hay fotos cargadas</p>
             </div>
           )}
         </div>
@@ -1170,12 +1621,12 @@ export default function NuevoServicioPage() {
             }}>
               <input
                 type="checkbox"
-                checked={parseFloat(aCuenta) > 0}
+                checked={dejaAdelanto}
                 onChange={(e) => {
-                  if (e.target.checked) {
+                  setDejaAdelanto(e.target.checked)
+                  if (!e.target.checked) {
                     setACuenta('0')
-                  } else {
-                    setACuenta('0')
+                    setMetodoPago('')
                   }
                 }}
                 style={{ width: '20px', height: '20px', cursor: 'pointer' }}
@@ -1183,7 +1634,7 @@ export default function NuevoServicioPage() {
               <span>💳 ¿Recibir Adelanto del Cliente?</span>
             </label>
 
-            {parseFloat(aCuenta) > 0 || metodoPago ? (
+            {dejaAdelanto ? (
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -1256,6 +1707,13 @@ export default function NuevoServicioPage() {
               <input
                 type="date"
                 value={fechaEstimada}
+                min={(() => {
+                  const today = new Date()
+                  const year = today.getFullYear()
+                  const month = String(today.getMonth() + 1).padStart(2, '0')
+                  const day = String(today.getDate()).padStart(2, '0')
+                  return `${year}-${month}-${day}`
+                })()}
                 onChange={(e) => setFechaEstimada(e.target.value)}
                 style={{
                   width: '100%',
@@ -1427,187 +1885,210 @@ export default function NuevoServicioPage() {
     resetearFormularioEquipo()
   }}
   title={equipoIndex !== null ? '✏️ Editar Equipo' : '➕ Agregar Nuevo Equipo'}
+  maxHeight="95vh"
 >
-  <div style={{ maxHeight: '80vh', overflowY: 'auto', paddingRight: '1rem' }}>
-    {/* CONTENIDO DEL MODAL - FORMULARIO DE EQUIPO */}
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
-      gap: '1rem',
-      marginBottom: '1rem'
-    }}>
-      <div>
-        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
-          Tipo de Equipo *
-        </label>
-        <select
-          value={tipoEquipo}
-          onChange={(e) => setTipoEquipo(e.target.value)}
-          required
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            fontSize: '0.875rem'
-          }}
-        >
-          <option value="">Seleccionar...</option>
-          <option value="LAPTOP">Laptop</option>
-          <option value="PC">PC / Computadora</option>
-          <option value="CELULAR">Celular</option>
-          <option value="TABLET">Tablet</option>
-          <option value="IMPRESORA">Impresora</option>
-          <option value="OTROS">Otros</option>
-        </select>
-      </div>
+  <div style={{ maxHeight: '90vh', overflowY: 'auto', paddingRight: isMobile ? '0.5rem' : '1rem' }}>
+    {/* DATOS BÁSICOS DEL EQUIPO */}
+    <div style={{ marginBottom: '1.25rem' }}>
+      <h4 style={{
+        fontSize: isMobile ? '0.9rem' : '0.95rem',
+        fontWeight: '600',
+        color: '#374151',
+        margin: '0 0 0.75rem 0',
+        paddingBottom: '0.5rem',
+        borderBottom: '1px solid #e5e7eb'
+      }}>
+        📱 Datos del Equipo
+      </h4>
+      
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+        gap: isMobile ? '0.75rem' : '0.9rem'
+      }}>
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: '600', fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#374151' }}>
+            Tipo *
+          </label>
+          <select
+            value={tipoEquipo}
+            onChange={(e) => setTipoEquipo(e.target.value)}
+            required
+            style={{
+              width: '100%',
+              padding: isMobile ? '0.5rem 0.6rem' : '0.6rem 0.75rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '5px',
+              fontSize: isMobile ? '0.8rem' : '0.85rem',
+              backgroundColor: 'white',
+              cursor: 'pointer',
+              transition: 'all 0.15s'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+            onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+          >
+            <option value="">Seleccionar...</option>
+            <option value="LAPTOP">Laptop</option>
+            <option value="PC">PC / Computadora</option>
+            <option value="CELULAR">Celular</option>
+            <option value="TABLET">Tablet</option>
+            <option value="IMPRESORA">Impresora</option>
+            <option value="OTROS">Otros</option>
+          </select>
+        </div>
 
-      <div>
-        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
-          Marca
-        </label>
-        <input
-          type="text"
-          value={marcaEquipo}
-          onChange={(e) => setMarcaEquipo(e.target.value)}
-          placeholder="Ej: HP, Lenovo"
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            fontSize: '0.875rem'
-          }}
-        />
-      </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: '600', fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#374151' }}>
+            Marca
+          </label>
+          <input
+            type="text"
+            value={marcaEquipo}
+            onChange={(e) => setMarcaEquipo(e.target.value)}
+            placeholder="HP, Lenovo..."
+            style={{
+              width: '100%',
+              padding: isMobile ? '0.5rem 0.6rem' : '0.6rem 0.75rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '5px',
+              fontSize: isMobile ? '0.8rem' : '0.85rem',
+              transition: 'all 0.15s'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+            onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+          />
+        </div>
 
-      <div>
-        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
-          Modelo/Detalles
-        </label>
-        <input
-          type="text"
-          value={descripcionEquipo}
-          onChange={(e) => setDescripcionEquipo(e.target.value)}
-          placeholder="Ej: Pavilion 15"
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            fontSize: '0.875rem'
-          }}
-        />
+        <div style={{ gridColumn: isMobile ? '1fr' : '1 / -1' }}>
+          <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: '600', fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#374151' }}>
+            Modelo
+          </label>
+          <input
+            type="text"
+            value={descripcionEquipo}
+            onChange={(e) => setDescripcionEquipo(e.target.value)}
+            placeholder="Pavilion 15, MacBook Pro 13..."
+            style={{
+              width: '100%',
+              padding: isMobile ? '0.5rem 0.6rem' : '0.6rem 0.75rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '5px',
+              fontSize: isMobile ? '0.8rem' : '0.85rem',
+              transition: 'all 0.15s'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+            onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+          />
+        </div>
       </div>
     </div>
 
-    {/* CHECKBOXES DE RECEPCIÓN */}
+    {/* ESTADO DE RECEPCIÓN (SOLO TALLER) */}
     {tipoServicioForm === 'TALLER' && (
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '1rem',
-        padding: '1rem',
-        backgroundColor: '#f9fafb',
-        borderRadius: '6px',
-        marginBottom: '1rem'
-      }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-          <input
-            type="checkbox"
-            checked={dejoSinCargador}
-            onChange={(e) => setDejoSinCargador(e.target.checked)}
-            style={{ width: '18px', height: '18px' }}
-          />
-          <span>Sin cargador</span>
-        </label>
+      <div style={{ marginBottom: '1.25rem' }}>
+        <h4 style={{
+          fontSize: isMobile ? '0.9rem' : '0.95rem',
+          fontWeight: '600',
+          color: '#374151',
+          margin: '0 0 0.75rem 0',
+          paddingBottom: '0.5rem',
+          borderBottom: '1px solid #e5e7eb'
+        }}>
+          ✅ Estado de Recepción
+        </h4>
+        
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: isMobile ? '0.6rem' : '0.8rem'
+        }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: isMobile ? '0.75rem' : '0.8rem' }}>
+            <input
+              type="checkbox"
+              checked={dejoSinCargador}
+              onChange={(e) => {
+                setDejoSinCargador(e.target.checked)
+                if (e.target.checked) setConCargador(false)
+              }}
+              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+            <span>Sin cargador</span>
+          </label>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-          <input
-            type="checkbox"
-            checked={dejoAccesorios}
-            onChange={(e) => setDejoAccesorios(e.target.checked)}
-            style={{ width: '18px', height: '18px' }}
-          />
-          <span>Dejó accesorios</span>
-        </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: isMobile ? '0.75rem' : '0.8rem' }}>
+            <input
+              type="checkbox"
+              checked={conCargador}
+              onChange={(e) => {
+                setConCargador(e.target.checked)
+                if (e.target.checked) setDejoSinCargador(false)
+              }}
+              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+            <span>Con cargador</span>
+          </label>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-          <input
-            type="checkbox"
-            checked={esCotizacion}
-            onChange={(e) => setEsCotizacion(e.target.checked)}
-            style={{ width: '18px', height: '18px' }}
-          />
-          <span>Es cotización</span>
-        </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: isMobile ? '0.75rem' : '0.8rem' }}>
+            <input
+              type="checkbox"
+              checked={dejoAccesorios}
+              onChange={(e) => setDejoAccesorios(e.target.checked)}
+              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+            <span>Dejó accesorios</span>
+          </label>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-          <input
-            type="checkbox"
-            checked={faltaPernos}
-            onChange={(e) => setFaltaPernos(e.target.checked)}
-            style={{ width: '18px', height: '18px' }}
-          />
-          <span>Falta de pernos</span>
-        </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: isMobile ? '0.75rem' : '0.8rem' }}>
+            <input
+              type="checkbox"
+              checked={faltaPernos}
+              onChange={(e) => setFaltaPernos(e.target.checked)}
+              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+            <span>Falta pernos</span>
+          </label>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-          <input
-            type="checkbox"
-            checked={tieneAranaduras}
-            onChange={(e) => setTieneAranaduras(e.target.checked)}
-            style={{ width: '18px', height: '18px' }}
-          />
-          <span>Tiene arañaduras</span>
-        </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: isMobile ? '0.75rem' : '0.8rem' }}>
+            <input
+              type="checkbox"
+              checked={tieneAranaduras}
+              onChange={(e) => setTieneAranaduras(e.target.checked)}
+              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+            <span>Arañaduras</span>
+          </label>
+        </div>
       </div>
     )}
 
-    {/* OTROS DETALLES */}
-    <div style={{ marginBottom: '1rem' }}>
-      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
-        Otros detalles
-      </label>
-      <textarea
-        value={otrosDetalles}
-        onChange={(e) => setOtrosDetalles(e.target.value)}
-        rows={2}
-        placeholder="Otros detalles del equipo..."
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          border: '1px solid #d1d5db',
-          borderRadius: '6px',
-          fontSize: '0.875rem',
-          resize: 'vertical'
-        }}
-      />
-    </div>
-
     {/* PROBLEMAS */}
-    <div style={{
-      padding: '1rem',
-      backgroundColor: '#f0fdf4',
-      borderRadius: '6px',
-      marginBottom: '1rem',
-      border: '1px solid #d1d5db'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-        <strong style={{ fontSize: '0.9rem' }}>🔧 Problemas</strong>
-        <div style={{ display: 'flex', gap: '0.25rem' }}>
+    <div style={{ marginBottom: '1.25rem', display: 'flex', flexDirection: 'column', maxHeight: '14rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
+        <h4 style={{
+          fontSize: isMobile ? '0.9rem' : '0.95rem',
+          fontWeight: '600',
+          color: '#374151',
+          margin: 0
+        }}>
+          🔧 Problemas
+        </h4>
+        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => setModalAgregarProblema(true)}
             style={{
-              padding: '0.3rem 0.6rem',
+              padding: isMobile ? '0.3rem 0.6rem' : '0.4rem 0.8rem',
               backgroundColor: '#3b82f6',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '0.75rem'
+              fontSize: isMobile ? '0.7rem' : '0.75rem',
+              fontWeight: '600',
+              transition: 'all 0.15s'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
           >
             + Agregar
           </button>
@@ -1615,14 +2096,18 @@ export default function NuevoServicioPage() {
             type="button"
             onClick={() => setModalNuevoProblema(true)}
             style={{
-              padding: '0.3rem 0.6rem',
+              padding: isMobile ? '0.3rem 0.6rem' : '0.4rem 0.8rem',
               backgroundColor: '#10b981',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '0.75rem'
+              fontSize: isMobile ? '0.7rem' : '0.75rem',
+              fontWeight: '600',
+              transition: 'all 0.15s'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
           >
             + Nuevo
           </button>
@@ -1630,86 +2115,177 @@ export default function NuevoServicioPage() {
       </div>
 
       {problemasSeleccionados.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginBottom: '0.75rem' }}>
-          {problemasSeleccionados.map(p => (
-            <span
+        <div style={{
+          border: '1px solid #e5e7eb',
+          borderRadius: '5px',
+          overflow: 'auto',
+          backgroundColor: '#fafafa',
+          minHeight: 0,
+          flex: 1
+        }}>
+          {problemasSeleccionados.map((p, index) => (
+            <div
               key={p.id}
               style={{
-                fontSize: '0.75rem',
-                backgroundColor: '#dbeafe',
-                color: '#1e40af',
-                padding: '0.2rem 0.5rem',
-                borderRadius: '3px',
-                display: 'flex',
+                display: 'grid',
+                gridTemplateColumns: '1fr auto',
                 alignItems: 'center',
-                gap: '0.3rem'
+                gap: '0.75rem',
+                padding: isMobile ? '0.5rem 0.6rem' : '0.6rem 0.75rem',
+                borderBottom: index < problemasSeleccionados.length - 1 ? '1px solid #e5e7eb' : 'none',
+                fontSize: isMobile ? '0.75rem' : '0.8rem'
               }}
             >
-              {p.nombre}
+              <span>{p.nombre}</span>
               <button
                 type="button"
                 onClick={() => eliminarProblema(p.id)}
                 style={{
-                  background: 'none',
+                  padding: '0.25rem 0.5rem',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
                   border: 'none',
-                  color: '#1e40af',
+                  borderRadius: '4px',
                   cursor: 'pointer',
-                  padding: 0,
-                  fontSize: '0.75rem'
+                  fontSize: '0.65rem',
+                  fontWeight: '600',
+                  transition: 'all 0.15s',
+                  flexShrink: 0
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
               >
                 ✕
               </button>
-            </span>
+            </div>
           ))}
         </div>
       )}
 
       <div>
-        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.75rem' }}>
-          Descripción adicional
+        <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: '600', fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#374151' }}>
+          Descripción
         </label>
         <textarea
           value={descripcionProblema}
           onChange={(e) => setDescripcionProblema(e.target.value)}
-          rows={2}
-          placeholder="Detalles adicionales..."
+          rows={isMobile ? 2 : 2}
+          placeholder="Síntomas, fallas..."
           style={{
             width: '100%',
-            padding: '0.5rem',
+            padding: isMobile ? '0.5rem 0.6rem' : '0.6rem 0.75rem',
             border: '1px solid #d1d5db',
-            borderRadius: '4px',
-            fontSize: '0.75rem',
-            resize: 'vertical'
+            borderRadius: '5px',
+            fontSize: isMobile ? '0.8rem' : '0.85rem',
+            resize: 'vertical',
+            fontFamily: 'inherit',
+            transition: 'all 0.15s'
           }}
+          onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+          onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
         />
       </div>
     </div>
 
-    {/* COSTO */}
-    <div style={{ marginBottom: '1rem' }}>
-      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
-        Costo del Servicio *
-      </label>
-      <input
-        type="number"
-        value={costoServicio}
-        onChange={(e) => setCostoServicio(e.target.value)}
-        required
-        min="0"
-        step="0.01"
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          border: '1px solid #d1d5db',
-          borderRadius: '6px',
-          fontSize: '0.875rem'
-        }}
-      />
+    {/* DETALLES Y COSTO */}
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+      gap: isMobile ? '1rem' : '1.2rem',
+      marginBottom: '1.25rem'
+    }}>
+      <div>
+        <h4 style={{
+          fontSize: isMobile ? '0.9rem' : '0.95rem',
+          fontWeight: '600',
+          color: '#374151',
+          margin: '0 0 0.75rem 0',
+          paddingBottom: '0.5rem',
+          borderBottom: '1px solid #e5e7eb'
+        }}>
+          📝 Detalles
+        </h4>
+        <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: '600', fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#374151' }}>
+          Otros detalles
+        </label>
+        <textarea
+          value={otrosDetalles}
+          onChange={(e) => setOtrosDetalles(e.target.value)}
+          rows={isMobile ? 2 : 2}
+          placeholder="Información adicional..."
+          style={{
+            width: '100%',
+            padding: isMobile ? '0.5rem 0.6rem' : '0.6rem 0.75rem',
+            border: '1px solid #d1d5db',
+            borderRadius: '5px',
+            fontSize: isMobile ? '0.8rem' : '0.85rem',
+            resize: 'vertical',
+            fontFamily: 'inherit',
+            transition: 'all 0.15s'
+          }}
+          onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+          onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+        />
+      </div>
+
+      <div>
+        <h4 style={{
+          fontSize: isMobile ? '0.9rem' : '0.95rem',
+          fontWeight: '600',
+          color: '#374151',
+          margin: '0 0 0.75rem 0',
+          paddingBottom: '0.5rem',
+          borderBottom: '1px solid #e5e7eb'
+        }}>
+          💰 Costo
+        </h4>
+        <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: '600', fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#374151' }}>
+          Monto (S/.) *
+        </label>
+        <input
+          type="number"
+          value={costoServicio}
+          onChange={(e) => setCostoServicio(e.target.value)}
+          required
+          min="0"
+          step="0.01"
+          placeholder="0.00"
+          style={{
+            width: '100%',
+            padding: isMobile ? '0.5rem 0.6rem' : '0.6rem 0.75rem',
+            border: '1px solid #d1d5db',
+            borderRadius: '5px',
+            fontSize: isMobile ? '0.9rem' : '0.95rem',
+            fontWeight: '600',
+            textAlign: 'center',
+            transition: 'all 0.15s'
+          }}
+          onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+          onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+        />
+        <div style={{
+          marginTop: '0.5rem',
+          paddingTop: '0.5rem',
+          borderTop: '1px solid #e5e7eb',
+          textAlign: 'center',
+          fontSize: isMobile ? '0.85rem' : '0.9rem',
+          fontWeight: '600',
+          color: '#374151'
+        }}>
+          S/ {parseFloat(costoServicio || '0').toFixed(2)}
+        </div>
+      </div>
     </div>
 
-    {/* BOTONES */}
-    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+    {/* BOTONES DE ACCIÓN */}
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr 1fr' : 'auto auto',
+      gap: isMobile ? '0.75rem' : '0.9rem',
+      justifyContent: isMobile ? 'stretch' : 'flex-end',
+      paddingTop: '1rem',
+      borderTop: '1px solid #e5e7eb'
+    }}>
       <button
         type="button"
         onClick={() => {
@@ -1717,14 +2293,18 @@ export default function NuevoServicioPage() {
           resetearFormularioEquipo()
         }}
         style={{
-          padding: '0.75rem 1.5rem',
+          padding: isMobile ? '0.65rem 1rem' : '0.7rem 1.3rem',
           backgroundColor: '#6b7280',
           color: 'white',
           border: 'none',
-          borderRadius: '6px',
+          borderRadius: '5px',
           cursor: 'pointer',
-          fontWeight: '600'
+          fontWeight: '600',
+          fontSize: isMobile ? '0.8rem' : '0.85rem',
+          transition: 'all 0.15s'
         }}
+        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4b5563'}
+        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6b7280'}
       >
         Cancelar
       </button>
@@ -1735,22 +2315,24 @@ export default function NuevoServicioPage() {
           setModalEquipoAbierto(false)
         }}
         style={{
-          padding: '0.75rem 1.5rem',
+          padding: isMobile ? '0.65rem 1rem' : '0.7rem 1.3rem',
           backgroundColor: '#10b981',
           color: 'white',
           border: 'none',
-          borderRadius: '6px',
+          borderRadius: '5px',
           cursor: 'pointer',
-          fontWeight: '600'
+          fontWeight: '600',
+          fontSize: isMobile ? '0.8rem' : '0.85rem',
+          transition: 'all 0.15s'
         }}
+        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
       >
-        {equipoIndex !== null ? '✏️ Actualizar' : '➕ Agregar'}
+        {equipoIndex !== null ? '✏️ Guardar' : '➕ Agregar'}
       </button>
     </div>
 
-    {/* MODALES DENTRO DEL MODAL DE EQUIPO */}
-    
-    {/* MODAL: AGREGAR PROBLEMA */}
+    {/* MODALES ANIDADOS */}
     <ModalAgregarProblema
       isOpen={modalAgregarProblema}
       onClose={() => setModalAgregarProblema(false)}
@@ -1760,13 +2342,20 @@ export default function NuevoServicioPage() {
         setModalAgregarProblema(false)
         setModalNuevoProblema(true)
       }}
+      onEditar={handleEditarProblema}
+      onEliminar={handleEliminarProblema}
     />
 
     {/* MODAL: NUEVO PROBLEMA */}
     <Modal
       isOpen={modalNuevoProblema}
-      onClose={() => setModalNuevoProblema(false)}
-      title="Crear Nuevo Problema"
+      onClose={() => {
+        setModalNuevoProblema(false)
+        setNuevoProblemaTexto('')
+        setNuevoProblemaDescripcion('')
+        sessionStorage.removeItem('problemaEditId')
+      }}
+      title={sessionStorage.getItem('problemaEditId') ? 'Editar Problema (Catálogo)' : 'Crear Nuevo Problema'}
     >
       <div>
         <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
@@ -1774,8 +2363,8 @@ export default function NuevoServicioPage() {
         </label>
         <input
           type="text"
-          value={nuevoProblema}
-          onChange={(e) => setNuevoProblema(e.target.value)}
+          value={nuevoProblemaTexto}
+          onChange={(e) => setNuevoProblemaTexto(e.target.value)}
           placeholder="Ej: Problema de batería"
           style={{
             width: '100%',
@@ -1785,10 +2374,33 @@ export default function NuevoServicioPage() {
             marginBottom: '1rem'
           }}
         />
+        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+          Descripción (opcional)
+        </label>
+        <textarea
+          value={nuevoProblemaDescripcion}
+          onChange={(e) => setNuevoProblemaDescripcion(e.target.value)}
+          placeholder="Ej: Síntomas comunes, reparaciones..."
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            marginBottom: '1rem',
+            minHeight: '80px',
+            fontFamily: 'inherit',
+            resize: 'vertical'
+          }}
+        />
         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
           <button
             type="button"
-            onClick={() => setModalNuevoProblema(false)}
+            onClick={() => {
+              setModalNuevoProblema(false)
+              setNuevoProblemaTexto('')
+              setNuevoProblemaDescripcion('')
+              sessionStorage.removeItem('problemaEditId')
+            }}
             style={{
               padding: '0.75rem 1.5rem',
               backgroundColor: '#6b7280',
@@ -1812,7 +2424,7 @@ export default function NuevoServicioPage() {
               cursor: 'pointer'
             }}
           >
-            Crear y Agregar
+            {sessionStorage.getItem('problemaEditId') ? 'Guardar Cambios' : 'Crear y Agregar'}
           </button>
         </div>
       </div>
@@ -1830,35 +2442,69 @@ export default function NuevoServicioPage() {
           setModalAgregarServicio(false)
           setModalNuevoServicio(true)
         }}
+        onEditar={handleEditarServicioCatalogo}
+        onEliminar={handleEliminarServicioCatalogo}
       />
 
       {/* MODAL: NUEVO SERVICIO - FUERA DEL MODAL DE EQUIPO */}
       <Modal
         isOpen={modalNuevoServicio}
-        onClose={() => setModalNuevoServicio(false)}
-        title="Crear Nuevo Servicio Adicional"
+        onClose={() => {
+          setModalNuevoServicio(false)
+          setNuevoServicioNombre('')
+          setNuevoServicioPrecio('0')
+          sessionStorage.removeItem('servicioEditIndex')
+          sessionStorage.removeItem('servicioEditId')
+        }}
+        title={
+          sessionStorage.getItem('servicioEditId') !== null 
+            ? '✏️ Editar Servicio (Catálogo)'
+            : sessionStorage.getItem('servicioEditIndex') !== null 
+            ? '✏️ Editar Servicio' 
+            : '➕ Crear Nuevo Servicio'
+        }
       >
         <div>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-              Nombre del servicio *
-            </label>
-            <input
-              type="text"
-              value={nuevoServicioNombre}
-              onChange={(e) => setNuevoServicioNombre(e.target.value)}
-              placeholder="Ej: Cambio de batería"
-              style={{
+          {sessionStorage.getItem('servicioEditIndex') === null && (
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                Nombre del servicio *
+              </label>
+              <input
+                type="text"
+                value={nuevoServicioNombre}
+                onChange={(e) => setNuevoServicioNombre(e.target.value)}
+                placeholder="Ej: Cambio de batería"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px'
+                }}
+              />
+            </div>
+          )}
+          {sessionStorage.getItem('servicioEditIndex') !== null && (
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                Nombre del servicio
+              </label>
+              <div style={{
                 width: '100%',
                 padding: '0.75rem',
                 border: '1px solid #d1d5db',
-                borderRadius: '6px'
-              }}
-            />
-          </div>
+                borderRadius: '6px',
+                backgroundColor: '#f0fdf4',
+                color: '#065f46',
+                fontWeight: '600'
+              }}>
+                {nuevoServicioNombre}
+              </div>
+            </div>
+          )}
           <div style={{ marginBottom: '1rem' }}>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-              Precio sugerido *
+              Precio *
             </label>
             <input
               type="number"
@@ -1878,7 +2524,13 @@ export default function NuevoServicioPage() {
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
             <button
               type="button"
-              onClick={() => setModalNuevoServicio(false)}
+              onClick={() => {
+                setModalNuevoServicio(false)
+                setNuevoServicioNombre('')
+                setNuevoServicioPrecio('0')
+                sessionStorage.removeItem('servicioEditIndex')
+                sessionStorage.removeItem('servicioEditId')
+              }}
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: '#6b7280',
@@ -1902,7 +2554,11 @@ export default function NuevoServicioPage() {
                 cursor: 'pointer'
               }}
             >
-              Crear y Agregar
+              {sessionStorage.getItem('servicioEditId') !== null 
+                ? '✏️ Actualizar Catálogo'
+                : sessionStorage.getItem('servicioEditIndex') !== null 
+                ? '✏️ Actualizar' 
+                : '➕ Crear y Agregar'}
             </button>
           </div>
         </div>

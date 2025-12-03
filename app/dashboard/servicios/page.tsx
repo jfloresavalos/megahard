@@ -41,6 +41,7 @@ export default function ServiciosTecnicosPage() {
   const [filtroEstado, setFiltroEstado] = useState('TODOS')
   const [filtroSede, setFiltroSede] = useState('TODAS')
   const [filtroTipo, setFiltroTipo] = useState('TODOS') // ✅ Filtro de tipo de servicio
+  const [busquedaCliente, setBusquedaCliente] = useState('') // ✅ Búsqueda por cliente (DNI/RUC/Nombre)
 
   // Filtros de fecha - Por defecto: hoy
   const [fechaDesde, setFechaDesde] = useState(() => {
@@ -122,6 +123,11 @@ export default function ServiciosTecnicosPage() {
         params.append('fechaHasta', fechaHasta)
       }
 
+      // ✅ Filtro de búsqueda de cliente
+      if (busquedaCliente && busquedaCliente.trim()) {
+        params.append('busquedaCliente', busquedaCliente.trim())
+      }
+
       if (params.toString()) {
         url += `?${params.toString()}`
       }
@@ -169,6 +175,17 @@ export default function ServiciosTecnicosPage() {
       month: '2-digit',
       year: 'numeric'
     })
+  }
+
+  const buscarServicios = () => {
+    cargarServicios()
+  }
+
+  const limpiarFiltros = () => {
+    setFechaDesde('')
+    setFechaHasta('')
+    setBusquedaCliente('')
+    // La función cargarServicios se ejecutará automáticamente por el useEffect
   }
 
   if (loading) {
@@ -306,8 +323,34 @@ export default function ServiciosTecnicosPage() {
               <option value="EN_REPARACION">En reparación</option>
               <option value="REPARADO">Reparado</option>
               <option value="ENTREGADO">Entregado</option>
+              <option value="PAGO_PENDIENTE">💰 Pago Pendiente</option>
               <option value="CANCELADO">Cancelado</option>
             </select>
+          </div>
+
+          {/* Búsqueda de Cliente */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <label style={{ fontWeight: '600', fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#6b7280' }}>
+              🔍 Cliente
+            </label>
+            <input
+              type="text"
+              placeholder="DNI, RUC o Nombre..."
+              value={busquedaCliente}
+              onChange={(e) => setBusquedaCliente(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  buscarServicios()
+                }
+              }}
+              style={{
+                padding: isMobile ? '0.5rem' : '0.5rem 1rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: isMobile ? '0.85rem' : '0.95rem',
+                width: '100%'
+              }}
+            />
           </div>
 
           {/* Filtros de Fecha */}
@@ -347,28 +390,43 @@ export default function ServiciosTecnicosPage() {
             />
           </div>
 
-          {/* Botón para ver todos */}
+          {/* Botones de Buscar y Limpiar */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', justifyContent: 'flex-end' }}>
             {!isMobile && <label style={{ height: '1.25rem' }}>&nbsp;</label>}
-            <button
-              onClick={() => {
-                setFechaDesde('')
-                setFechaHasta('')
-              }}
-              style={{
-                padding: isMobile ? '0.5rem' : '0.5rem 1rem',
-                backgroundColor: '#6b7280',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: isMobile ? '0.85rem' : '0.875rem',
-                fontWeight: '600',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              Ver Todos
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={buscarServicios}
+                style={{
+                  padding: isMobile ? '0.5rem' : '0.5rem 1rem',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: isMobile ? '0.85rem' : '0.875rem',
+                  fontWeight: '600',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                🔍 Buscar
+              </button>
+              <button
+                onClick={limpiarFiltros}
+                style={{
+                  padding: isMobile ? '0.5rem' : '0.5rem 1rem',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: isMobile ? '0.85rem' : '0.875rem',
+                  fontWeight: '600',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Limpiar
+              </button>
+            </div>
           </div>
         </div>
 

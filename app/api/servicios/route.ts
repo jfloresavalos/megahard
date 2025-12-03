@@ -10,9 +10,13 @@ export async function GET(request: Request) {
     const tipoServicio = searchParams.get('tipoServicio')
     const fechaDesde = searchParams.get('fechaDesde')
     const fechaHasta = searchParams.get('fechaHasta')
+    const busquedaCliente = searchParams.get('busquedaCliente') // ✅ Nuevo parámetro de búsqueda
 
-    const where: any = {
-      fechaCancelacion: null // ✅ Por defecto, excluir cancelados
+    const where: any = {}
+
+    // ✅ Por defecto excluir cancelados, EXCEPTO si se filtra explícitamente por CANCELADO
+    if (estado !== 'CANCELADO') {
+      where.fechaCancelacion = null
     }
 
     if (sedeId) {
@@ -20,12 +24,47 @@ export async function GET(request: Request) {
     }
 
     if (estado && estado !== 'TODOS') {
-      where.estado = estado
+      // ✅ Filtro especial para "PAGO_PENDIENTE"
+      if (estado === 'PAGO_PENDIENTE') {
+        where.estado = 'ENTREGADO'
+        where.saldo = {
+          gt: 0
+        }
+      } else if (estado === 'CANCELADO') {
+        // ✅ Si filtra por CANCELADO, mostrar solo los cancelados
+        where.estado = 'CANCELADO'
+        where.fechaCancelacion = {
+          not: null
+        }
+      } else {
+        where.estado = estado
+      }
     }
 
     // ✅ Filtro de tipo de servicio (TALLER o DOMICILIO)
     if (tipoServicio && tipoServicio !== 'TODOS') {
       where.tipoServicio = tipoServicio
+    }
+
+    // ✅ Filtro de búsqueda por cliente (DNI, RUC o Nombre)
+    if (busquedaCliente && busquedaCliente.trim()) {
+      const busqueda = busquedaCliente.trim()
+
+      // Búsqueda flexible: puede ser DNI/RUC o parte del nombre
+      where.OR = [
+        {
+          clienteDni: {
+            contains: busqueda,
+            mode: 'insensitive'
+          }
+        },
+        {
+          clienteNombre: {
+            contains: busqueda,
+            mode: 'insensitive'
+          }
+        }
+      ]
     }
 
     // ✅ Filtro de fecha con zona horaria de Perú (UTC-5)
@@ -100,6 +139,7 @@ export async function POST(request: Request) {
       tipoServicioId, // ✅ Puede venir el tipo de servicio específico
       // ✅ AHORA RECIBIMOS ARRAY DE EQUIPOS EN LUGAR DE UN SOLO EQUIPO
       equipos = [], // Array de equipos con sus datos individuales
+      fotosServicio = [], // Fotos a nivel de servicio
       serviciosAdicionales,
       metodoPago,
       fechaEstimada,
@@ -113,6 +153,7 @@ export async function POST(request: Request) {
 
     console.log('📝 Creando servicio técnico...', tipoServicioForm)
     console.log('📦 Equipos recibidos:', equipos.length) // ✅ DEBUG
+    console.log('📸 Fotos del servicio:', fotosServicio.length) // ✅ DEBUG
     console.log('📅 fechaEstimada recibida:', fechaEstimada, 'tipo:', typeof fechaEstimada) // ✅ DEBUG
 
     // ✅ Validar que haya al menos un equipo
@@ -309,12 +350,15 @@ export async function POST(request: Request) {
         total: costoTotalNum,
         aCuenta: aCuentaNum,
         saldo: saldoNum,
-        serviciosAdicionales: serviciosAdicionales || [],
+        serviciosAdicionales: JSON.stringify({
+          equipos: equipos, // ✅ GUARDAR TODOS LOS EQUIPOS CON SUS CHECKBOXES
+          servicios: serviciosAdicionales || []
+        }),
         metodoPago,
         fechaRecepcion: new Date(),
         fechaEntregaEstimada: fechaEstimada ? new Date(fechaEstimada) : null,
         garantiaDias: parseInt(garantiaDias) || 30,
-        fotosEquipo: primerEquipo.fotos || [], // ✅ Fotos del primer equipo como referencia
+        fotosEquipo: fotosServicio, // ✅ Fotos a nivel de servicio
         estado: estadoInicial,
         prioridad,
         // ✅ CAMPOS PARA SERVICIOS A DOMICILIO
@@ -337,25 +381,10 @@ export async function POST(request: Request) {
 
     console.log('✅ Servicio creado:', numeroServicio)
 
-    // ✅ AHORA CREAR UN SERVICIO ITEM POR CADA EQUIPO
-    console.log('📦 Creando', equipos.length, 'items de servicio...')
-    for (let i = 0; i < equipos.length; i++) {
-      const equipo = equipos[i]
-      
-      // Para este MVP, usamos una "línea" por equipo en lugar de vincular a un producto específico
-      // En el futuro se podría vincular a productos del catálogo
-      const item = await prisma.servicioItem.create({
-        data: {
-          servicioId: servicio.id,
-          productoId: '', // ✅ Podría linkear a producto, pero por ahora vacío
-          cantidad: 1,
-          precioUnit: equipo.costoServicio,
-          subtotal: equipo.costoServicio
-        }
-      })
-      
-      console.log(`  ✅ Item ${i + 1}: ${equipo.tipoEquipo} - S/ ${equipo.costoServicio}`)
-    }
+    // ✅ Los equipos se guardan en serviciosAdicionales como JSON
+    // No necesitamos crear ServicioItem individuales para cada equipo
+    // ya que el costo total se calcula sumando todos los equipos
+    console.log('📦 Equipos guardados en serviciosAdicionales (total:', equipos.length, 'equipos)')
 
     console.log('✅ Servicio creado exitosamente:', numeroServicio)
 

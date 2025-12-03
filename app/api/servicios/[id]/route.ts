@@ -82,6 +82,7 @@ export async function GET(
         direccionServicio: true,
         quienRecibeNombre: true,
         quienRecibeDni: true,
+        productosVendidos: true,
 
         // Usuario y Sede
         usuarioId: true,
@@ -151,11 +152,12 @@ export async function GET(
     console.log('📸 fotosEquipo raw:', servicio.fotosEquipo)
     console.log('📸 Tipo:', typeof servicio.fotosEquipo)
 
-    // ✅ PARSEAR fotosEquipo, fotosDespues Y serviciosAdicionales
+    // ✅ PARSEAR fotosEquipo, fotosDespues, serviciosAdicionales Y productosVendidos
     let fotosEquipoParsed: string[] = []
     let fotosDespuesParsed: string[] = []
     let serviciosAdicionalesParsed: unknown[] = []
     let problemasReportadosParsed: unknown[] = []
+    let productosVendidosParsed: any[] = []
 
     // Parsear fotos
     if (servicio.fotosEquipo) {
@@ -211,10 +213,24 @@ export async function GET(
       }
     }
 
+    // Parsear productos vendidos
+    if (servicio.productosVendidos) {
+      if (typeof servicio.productosVendidos === 'string') {
+        try {
+          productosVendidosParsed = JSON.parse(servicio.productosVendidos)
+        } catch {
+          productosVendidosParsed = []
+        }
+      } else if (Array.isArray(servicio.productosVendidos)) {
+        productosVendidosParsed = servicio.productosVendidos
+      }
+    }
+
     console.log('✅ [SERVICIO] fotosEquipo parseado:', fotosEquipoParsed?.length || 0)
     console.log('✅ [SERVICIO] fotosDespues parseado:', fotosDespuesParsed?.length || 0)
     console.log('✅ [SERVICIO] serviciosAdicionales parseado:', serviciosAdicionalesParsed?.length || 0)
     console.log('✅ [SERVICIO] items (repuestos):', servicio.items?.length || 0)
+    console.log('✅ [SERVICIO] productosVendidos parseado:', productosVendidosParsed?.length || 0)
 
     // Formatear respuesta
     const servicioFormateado = {
@@ -223,6 +239,7 @@ export async function GET(
       fotosDespues: fotosDespuesParsed,
       serviciosAdicionales: serviciosAdicionalesParsed,
       problemasReportados: problemasReportadosParsed,
+      productosVendidos: productosVendidosParsed,
       tecnico: servicio.usuario,
       tipoServicioTipo: servicio.tipoServicio, // ✅ String "TALLER" o "DOMICILIO"
       items: servicio.items // ✅ YA INCLUIDO
@@ -295,7 +312,8 @@ export async function PUT(
       fechaEstimada,
       garantiaDias,
       prioridad,
-      tecnicoId
+      tecnicoId,
+      equipos = [] // ✅ Array de equipos con sus datos
     } = body
 
     // Validar DNI y Celular
@@ -343,21 +361,31 @@ export async function PUT(
 
     // ✅ Solo actualizar costos si el estado lo permite
     if (puedeEditarCostos) {
-      const costoServicioNum = parseFloat(costoServicio) || 0
-      let costoServiciosAdicionales = 0
+      // Calcular costo total de TODOS los equipos
+      let costoTotalEquipos = 0
+      if (equipos && Array.isArray(equipos)) {
+        costoTotalEquipos = equipos.reduce((sum: number, equipo: any) => {
+          return sum + (parseFloat(equipo.costoServicio) || 0)
+        }, 0)
+      }
 
+      let costoServiciosAdicionales = 0
       if (serviciosAdicionales && Array.isArray(serviciosAdicionales)) {
         costoServiciosAdicionales = serviciosAdicionales.reduce((sum: number, servicio: any) => {
           return sum + (parseFloat(servicio.precio) || 0)
         }, 0)
       }
 
-      const costoTotalNum = costoServicioNum + costoServiciosAdicionales
+      const costoTotalNum = costoTotalEquipos + costoServiciosAdicionales
       const aCuentaNum = parseFloat(aCuenta) || 0
       const saldoNum = costoTotalNum - aCuentaNum
 
-      dataToUpdate.costoServicio = costoServicioNum
-      dataToUpdate.serviciosAdicionales = serviciosAdicionales || []
+      dataToUpdate.costoServicio = costoTotalEquipos
+      // ✅ Guardar equipos y servicios como JSON
+      dataToUpdate.serviciosAdicionales = JSON.stringify({
+        equipos: equipos || [],
+        servicios: serviciosAdicionales || []
+      })
       dataToUpdate.total = costoTotalNum
       dataToUpdate.aCuenta = aCuentaNum
       dataToUpdate.saldo = saldoNum

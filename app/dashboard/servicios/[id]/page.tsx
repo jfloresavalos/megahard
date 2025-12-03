@@ -88,7 +88,7 @@ export default function DetalleServicioPage() {
   const params = useParams()
   const servicioId = params.id as string
 
-const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
 useEffect(() => {
   const checkMobile = () => {
@@ -110,6 +110,8 @@ useEffect(() => {
   const [isModalEntregadoOpen, setIsModalEntregadoOpen] = useState(false)
   const [isModalAnularOpen, setIsModalAnularOpen] = useState(false)
   const [isModalRegistrarPagoOpen, setIsModalRegistrarPagoOpen] = useState(false)
+  const [isModalVerEquipoOpen, setIsModalVerEquipoOpen] = useState(false)
+  const [equipoSeleccionado, setEquipoSeleccionado] = useState<any>(null)
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 768)
@@ -672,6 +674,25 @@ useEffect(() => {
         </button>
       )}
 
+      {/* Si está EN_DOMICILIO: todos pueden editar */}
+      {servicio.estado === 'EN_DOMICILIO' && (
+        <button
+          onClick={() => router.push(`/dashboard/servicios/${servicioId}/editar`)}
+          style={{
+            padding: '0.75rem 1.5rem',
+            backgroundColor: '#10b981',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            fontWeight: '600'
+          }}
+        >
+          ✏️ Editar Servicio a Domicilio
+        </button>
+      )}
+
       {/* Si está EN_REPARACION: solo admin puede editar */}
       {servicio.estado === 'EN_REPARACION' && session?.user?.rol === 'admin' && (
         <button
@@ -730,143 +751,249 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* INFORMACIÓN DEL EQUIPO */}
-          <div style={{
-            backgroundColor: 'white',
-            padding: isMobile ? '1rem' : '2rem',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            marginBottom: '1.5rem'
-          }}>
-            <h2 style={{
-              fontSize: isMobile ? '1.25rem' : '1.5rem',
-              fontWeight: '600',
-              marginBottom: '1.5rem',
-              borderBottom: '2px solid #e5e7eb',
-              paddingBottom: '0.5rem'
-            }}>
-              💻 INFORMACIÓN DEL EQUIPO
-            </h2>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
-              gap: '1.5rem',
-              marginBottom: '1.5rem'
-            }}>
-              <div>
-                <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Tipo</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: '600' }}>{servicio.tipoEquipo}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Marca/Modelo</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: '600' }}>{servicio.marcaModelo || 'N/A'}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Descripción</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: '600' }}>{servicio.descripcionEquipo || 'N/A'}</div>
-              </div>
-            </div>
+          {/* EQUIPOS MÚLTIPLES */}
+          {(() => {
+            try {
+              let serviciosAdicionales: any = servicio.serviciosAdicionales;
+              if (typeof serviciosAdicionales === 'string') {
+                serviciosAdicionales = JSON.parse(serviciosAdicionales);
+              }
+              const equipos = serviciosAdicionales?.equipos as any[] || [];
+              
+              if (equipos.length > 0) {
+                return (
+                  <div style={{
+                    backgroundColor: 'white',
+                    padding: isMobile ? '1rem' : '2rem',
+                    borderRadius: '8px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <h2 style={{
+                      fontSize: isMobile ? '1.25rem' : '1.5rem',
+                      fontWeight: '600',
+                      marginBottom: '1.5rem',
+                      borderBottom: '2px solid #e5e7eb',
+                      paddingBottom: '0.5rem'
+                    }}>
+                      💻 EQUIPOS ({equipos.length})
+                    </h2>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))',
+                      gap: isMobile ? '0.75rem' : '1rem'
+                    }}>
+                      {equipos.map((equipo, index) => (
+                        <div
+                          key={index}
+                          onClick={() => {
+                            setEquipoSeleccionado({ ...equipo, index })
+                            setIsModalVerEquipoOpen(true)
+                          }}
+                          style={{
+                            padding: isMobile ? '1rem' : '1.25rem',
+                            backgroundColor: 'white',
+                            borderRadius: isMobile ? '6px' : '8px',
+                            border: '2px solid #e5e7eb',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: isMobile ? '0.6rem' : '0.75rem'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isMobile) {
+                              e.currentTarget.style.backgroundColor = '#f0f9ff'
+                              e.currentTarget.style.borderColor = '#3b82f6'
+                              e.currentTarget.style.transform = 'translateY(-4px)'
+                              e.currentTarget.style.boxShadow = '0 8px 16px rgba(59, 130, 246, 0.15)'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isMobile) {
+                              e.currentTarget.style.backgroundColor = 'white'
+                              e.currentTarget.style.borderColor = '#e5e7eb'
+                              e.currentTarget.style.transform = 'translateY(0)'
+                              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'
+                            }
+                          }}
+                        >
+                          {/* Header */}
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            paddingBottom: isMobile ? '0.6rem' : '0.75rem',
+                            borderBottom: '2px solid #e5e7eb',
+                            gap: '0.5rem'
+                          }}>
+                            <h3 style={{
+                              fontSize: isMobile ? '0.9rem' : '1rem',
+                              fontWeight: '700',
+                              margin: 0,
+                              color: '#1f2937'
+                            }}>
+                              💻 Equipo #{index + 1}
+                            </h3>
+                            <span style={{
+                              padding: isMobile ? '0.3rem 0.6rem' : '0.375rem 0.75rem',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              borderRadius: '6px',
+                              fontSize: isMobile ? '0.8rem' : '0.875rem',
+                              fontWeight: '700',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              S/ {(equipo.costoServicio || 0).toFixed(2)}
+                            </span>
+                          </div>
 
-            {/* ✅ DIRECCIÓN (solo para servicios a domicilio) */}
-            {servicio.tipoServicioTipo === 'DOMICILIO' && servicio.direccionServicio && (
-              <div style={{
-                marginTop: '1rem',
-                padding: '1rem',
-                backgroundColor: '#f0fdf4',
-                borderRadius: '6px',
-                border: '2px solid #10b981'
-              }}>
-                <div style={{ fontSize: '0.875rem', color: '#065f46', marginBottom: '0.5rem', fontWeight: '600' }}>
-                  📍 Dirección del servicio a domicilio:
-                </div>
-                <div style={{
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  color: '#047857'
-                }}>
-                  {servicio.direccionServicio}
-                </div>
-              </div>
-            )}
+                          {/* Tipo y Marca */}
+                          <div>
+                            <div style={{ fontSize: isMobile ? '0.7rem' : '0.75rem', color: '#6b7280', marginBottom: '0.25rem', fontWeight: '600', textTransform: 'uppercase' }}>Tipo</div>
+                            <div style={{ fontSize: isMobile ? '0.875rem' : '0.95rem', fontWeight: '600', color: '#1f2937' }}>{equipo.tipoEquipo || 'N/A'}</div>
+                          </div>
 
-            {/* ✅ BADGES DE RECEPCIÓN (solo para servicios de TALLER) */}
-            {servicio.tipoServicioTipo === 'TALLER' && (
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '1rem',
-                padding: '1rem',
-                backgroundColor: '#f9fafb',
-                borderRadius: '6px',
-                marginTop: '1rem'
-              }}>
-              {servicio.dejoSinCargador && (
-                <span style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: '#fee2e2',
-                  color: '#dc2626',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  fontWeight: '500'
-                }}>
-                  ⚠️ Sin cargador
-                </span>
-              )}
-              {servicio.dejoAccesorios && (
-                <span style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: '#dbeafe',
-                  color: '#1e40af',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  fontWeight: '500'
-                }}>
-                  ✓ Con accesorios
-                </span>
-              )}
-              {servicio.faltaPernos && (
-                <span style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: '#fee2e2',
-                  color: '#dc2626',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  fontWeight: '500'
-                }}>
-                  🔩 Falta pernos
-                </span>
-              )}
-              {servicio.tieneAranaduras && (
-                <span style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: '#fee2e2',
-                  color: '#dc2626',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  fontWeight: '500'
-                }}>
-                  ⚠️ Tiene arañaduras
-                </span>
-              )}
-              </div>
-            )}
+                          <div>
+                            <div style={{ fontSize: isMobile ? '0.7rem' : '0.75rem', color: '#6b7280', marginBottom: '0.25rem', fontWeight: '600', textTransform: 'uppercase' }}>Marca y Modelo</div>
+                            <div style={{ fontSize: isMobile ? '0.85rem' : '0.9rem', fontWeight: '500', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{equipo.marcaModelo || 'N/A'}</div>
+                          </div>
 
-            {servicio.otrosDetalles && (
-              <div style={{ marginTop: '1rem' }}>
-                <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem', fontWeight: '600' }}>
-                  Otros detalles:
-                </div>
-                <div style={{
-                  padding: '1rem',
-                  backgroundColor: '#f9fafb',
-                  borderRadius: '6px',
-                  fontSize: '0.95rem'
-                }}>
-                  {servicio.otrosDetalles}
-                </div>
-              </div>
-            )}
-          </div>
+                          {/* Estado Principal */}
+                          <div style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: isMobile ? '0.4rem' : '0.5rem',
+                            paddingTop: '0.5rem',
+                            minHeight: isMobile ? '1.5rem' : '2rem'
+                          }}>
+                            {equipo.dejoSinCargador && (
+                              <span style={{
+                                padding: isMobile ? '0.3rem 0.6rem' : '0.375rem 0.75rem',
+                                backgroundColor: '#fee2e2',
+                                color: '#dc2626',
+                                borderRadius: '4px',
+                                fontSize: isMobile ? '0.7rem' : '0.75rem',
+                                fontWeight: '600'
+                              }}>
+                                ⚠️ Sin cargador
+                              </span>
+                            )}
+                            {equipo.conCargador && (
+                              <span style={{
+                                padding: isMobile ? '0.3rem 0.6rem' : '0.375rem 0.75rem',
+                                backgroundColor: '#dcfce7',
+                                color: '#166534',
+                                borderRadius: '4px',
+                                fontSize: isMobile ? '0.7rem' : '0.75rem',
+                                fontWeight: '600'
+                              }}>
+                                🔌 Dejó cargador
+                              </span>
+                            )}
+                            {equipo.dejoAccesorios && (
+                              <span style={{
+                                padding: isMobile ? '0.3rem 0.6rem' : '0.375rem 0.75rem',
+                                backgroundColor: '#dbeafe',
+                                color: '#1e40af',
+                                borderRadius: '4px',
+                                fontSize: isMobile ? '0.7rem' : '0.75rem',
+                                fontWeight: '600'
+                              }}>
+                                📦 Accesorios
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Click para ver más */}
+                          <div style={{
+                            marginTop: 'auto',
+                            paddingTop: isMobile ? '0.6rem' : '0.75rem',
+                            borderTop: '1px solid #e5e7eb',
+                            textAlign: 'center',
+                            fontSize: isMobile ? '0.75rem' : '0.8rem',
+                            color: '#3b82f6',
+                            fontWeight: '600'
+                          }}>
+                            👁️ {isMobile ? 'Ver detalles' : 'Click para ver detalles'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            } catch (error) {
+              return null;
+            }
+          })()}
+
+          {/* SERVICIOS ADICIONALES */}
+          {(() => {
+            try {
+              let serviciosAdicionales: any = servicio.serviciosAdicionales;
+              if (typeof serviciosAdicionales === 'string') {
+                serviciosAdicionales = JSON.parse(serviciosAdicionales);
+              }
+              const servicios = serviciosAdicionales?.servicios as any[] || [];
+              
+              if (servicios.length > 0) {
+                return (
+                  <div style={{
+                    backgroundColor: 'white',
+                    padding: isMobile ? '1rem' : '2rem',
+                    borderRadius: '8px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <h2 style={{
+                      fontSize: isMobile ? '1.25rem' : '1.5rem',
+                      fontWeight: '600',
+                      marginBottom: '1.5rem',
+                      borderBottom: '2px solid #e5e7eb',
+                      paddingBottom: '0.5rem'
+                    }}>
+                      🛠️ SERVICIOS ADICIONALES ({servicios.length})
+                    </h2>
+                    <div style={{
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      overflow: 'hidden'
+                    }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#f9fafb' }}>
+                            <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', fontSize: '0.875rem', color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Servicio</th>
+                            <th style={{ padding: '1rem', textAlign: 'right', fontWeight: '600', fontSize: '0.875rem', color: '#374151', borderBottom: '1px solid #e5e7eb', width: '150px' }}>Precio</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {servicios.map((svc: any, index: number) => (
+                            <tr key={index} style={{ backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb', borderBottom: index < servicios.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
+                              <td style={{ padding: '1rem', fontWeight: '500', fontSize: '0.95rem' }}>{svc.nombre || svc}</td>
+                              <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '600', fontSize: '0.95rem', color: '#10b981' }}>S/ {typeof svc === 'object' ? (svc.precio?.toFixed(2) || '0.00') : '0.00'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr style={{ backgroundColor: '#f0fdf4', borderTop: '2px solid #10b981' }}>
+                            <td style={{ padding: '1rem', fontWeight: '700', fontSize: '1rem' }}>TOTAL SERVICIOS:</td>
+                            <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '700', fontSize: '1rem', color: '#10b981' }}>S/ {servicios.reduce((sum: number, s: any) => sum + (typeof s === 'object' ? (s.precio || 0) : 0), 0).toFixed(2)}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            } catch (error) {
+              return null;
+            }
+          })()}
+
 
           {/* FOTOS INICIALES */}
           {servicio.fotosEquipo && servicio.fotosEquipo.length > 0 && (
@@ -933,86 +1060,6 @@ useEffect(() => {
             </div>
           )}
 
-          {/* PROBLEMAS REPORTADOS */}
-          <div style={{
-            backgroundColor: 'white',
-            padding: isMobile ? '1rem' : '2rem',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            marginBottom: '1.5rem'
-          }}>
-            <h2 style={{
-              fontSize: isMobile ? '1.25rem' : '1.5rem',
-              fontWeight: '600',
-              marginBottom: '1.5rem',
-              borderBottom: '2px solid #e5e7eb',
-              paddingBottom: '0.5rem'
-            }}>
-              🔧 PROBLEMAS REPORTADOS
-            </h2>
-            {servicio.problemasReportados && servicio.problemasReportados.length > 0 && (
-              <div style={{ marginBottom: servicio.otrosProblemas ? '1.5rem' : 0 }}>
-                <div style={{
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  color: '#374151',
-                  marginBottom: '0.75rem'
-                }}>
-                  Problemas identificados:
-                </div>
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem'
-                }}>
-                  {servicio.problemasReportados.map((problemaId: string, index: number) => (
-                    <div
-                      key={index}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        backgroundColor: '#dbeafe',
-                        borderRadius: '6px',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                        color: '#1e40af',
-                        border: '1px solid #93c5fd'
-                      }}
-                    >
-                      ✓ {problemasNombres[problemaId] || `Problema #${index + 1}`}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {servicio.otrosProblemas && (
-              <div>
-                <div style={{
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  color: '#374151',
-                  marginBottom: '0.75rem'
-                }}>
-                  Descripción adicional:
-                </div>
-                <div style={{
-                  padding: '1rem',
-                  backgroundColor: '#fef3c7',
-                  borderRadius: '6px',
-                  border: '1px solid #fbbf24'
-                }}>
-                  <p style={{
-                    fontSize: '1rem',
-                    color: '#78350f',
-                    margin: 0,
-                    whiteSpace: 'pre-wrap'
-                  }}>
-                    {servicio.otrosProblemas}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* COSTOS INICIALES */}
           <div style={{
             backgroundColor: 'white',
@@ -1028,7 +1075,7 @@ useEffect(() => {
               borderBottom: '2px solid #e5e7eb',
               paddingBottom: '0.5rem'
             }}>
-              💰 COSTOS DEL SERVICIO
+              💰 COSTOS INICIALES (RECEPCIÓN)
             </h2>
             <div style={{
               backgroundColor: '#f9fafb',
@@ -1037,31 +1084,101 @@ useEffect(() => {
               border: '2px solid #e5e7eb'
             }}>
               <div style={{
+                backgroundColor: '#dbeafe',
+                padding: '0.75rem',
+                borderRadius: '6px',
+                marginBottom: '1rem',
+                fontSize: '0.875rem',
+                color: '#1e40af',
+                fontWeight: '500'
+              }}>
+                ℹ️ Esta pestaña solo muestra los costos definidos al recepcionar el servicio
+              </div>
+
+              {/* Costo de Equipos */}
+              <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 marginBottom: '0.75rem',
                 fontSize: '1rem'
               }}>
-                <span style={{ fontWeight: '500' }}>Costo del Servicio:</span>
+                <span style={{ fontWeight: '500' }}>Costo de Equipos:</span>
                 <span style={{ fontWeight: '600' }}>S/ {Number(servicio.costoServicio || 0).toFixed(2)}</span>
               </div>
+
+              {/* Servicios Adicionales */}
+              {(() => {
+                try {
+                  let serviciosAdicionales: any = servicio.serviciosAdicionales;
+                  if (typeof serviciosAdicionales === 'string') {
+                    serviciosAdicionales = JSON.parse(serviciosAdicionales);
+                  }
+                  const servicios = serviciosAdicionales?.servicios as any[] || [];
+                  const costoAdicionales = servicios.reduce((sum: number, s: any) => sum + (s.precio || 0), 0);
+
+                  if (costoAdicionales > 0) {
+                    return (
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        marginBottom: '0.75rem',
+                        fontSize: '1rem'
+                      }}>
+                        <span style={{ fontWeight: '500' }}>Servicios Adicionales:</span>
+                        <span style={{ fontWeight: '600' }}>S/ {costoAdicionales.toFixed(2)}</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                } catch {
+                  return null;
+                }
+              })()}
+
+              {/* Separador */}
+              <div style={{
+                borderTop: '2px solid #d1d5db',
+                marginTop: '0.75rem',
+                marginBottom: '0.75rem'
+              }}></div>
+
+              {/* Total (solo equipos + servicios adicionales) */}
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 marginBottom: '0.75rem',
-                fontSize: '1rem'
+                fontSize: '1.125rem'
               }}>
-                <span style={{ fontWeight: '500' }}>A Cuenta Inicial:</span>
-                <span style={{ fontWeight: '600', color: '#3b82f6' }}>S/ {Number(servicio.aCuenta || 0).toFixed(2)}</span>
+                <span style={{ fontWeight: '600' }}>TOTAL:</span>
+                <span style={{ fontWeight: '700', color: '#059669' }}>
+                  S/ {(() => {
+                    try {
+                      let serviciosAdicionales: any = servicio.serviciosAdicionales;
+                      if (typeof serviciosAdicionales === 'string') {
+                        serviciosAdicionales = JSON.parse(serviciosAdicionales);
+                      }
+                      const servicios = serviciosAdicionales?.servicios as any[] || [];
+                      const costoAdicionales = servicios.reduce((sum: number, s: any) => sum + (s.precio || 0), 0);
+                      return (Number(servicio.costoServicio || 0) + costoAdicionales).toFixed(2);
+                    } catch {
+                      return Number(servicio.costoServicio || 0).toFixed(2);
+                    }
+                  })()}
+                </span>
               </div>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: '1rem'
-              }}>
-                <span style={{ fontWeight: '500' }}>Método de Pago:</span>
-                <span style={{ fontWeight: '600' }}>{servicio.metodoPago || 'N/A'}</span>
-              </div>
+
+              {/* A Cuenta (abono/adelanto) */}
+              {Number(servicio.aCuenta || 0) > 0 && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '0.75rem',
+                  fontSize: '1rem'
+                }}>
+                  <span style={{ fontWeight: '500' }}>A Cuenta (Abono):</span>
+                  <span style={{ fontWeight: '600', color: '#059669' }}>S/ {Number(servicio.aCuenta || 0).toFixed(2)}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1440,6 +1557,187 @@ useEffect(() => {
             </div>
           )}
 
+          {/* RESUMEN ACUMULADO EN REPARACIÓN */}
+          <div style={{
+            backgroundColor: 'white',
+            padding: isMobile ? '1rem' : '2rem',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            marginBottom: '1.5rem',
+            border: '2px solid #3b82f6'
+          }}>
+            <h2 style={{
+              fontSize: isMobile ? '1.25rem' : '1.5rem',
+              fontWeight: '600',
+              marginBottom: '1.5rem',
+              borderBottom: '2px solid #e5e7eb',
+              paddingBottom: '0.5rem'
+            }}>
+              💰 COSTOS ACUMULADOS (RECEPCIÓN + REPARACIÓN)
+            </h2>
+            <div style={{
+              backgroundColor: '#f9fafb',
+              padding: '1.5rem',
+              borderRadius: '8px',
+              border: '2px solid #e5e7eb'
+            }}>
+              <div style={{
+                backgroundColor: '#fef3c7',
+                padding: '0.75rem',
+                borderRadius: '6px',
+                marginBottom: '1rem',
+                fontSize: '0.875rem',
+                color: '#92400e',
+                fontWeight: '500'
+              }}>
+                ℹ️ Incluye los costos iniciales + repuestos agregados en reparación
+              </div>
+
+              {/* Costo de Equipos */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '0.75rem',
+                fontSize: '1rem'
+              }}>
+                <span style={{ fontWeight: '500' }}>Costo de Equipos:</span>
+                <span style={{ fontWeight: '600' }}>S/ {Number(servicio.costoServicio || 0).toFixed(2)}</span>
+              </div>
+
+              {/* Servicios Adicionales */}
+              {(() => {
+                try {
+                  let serviciosAdicionales: any = servicio.serviciosAdicionales;
+                  if (typeof serviciosAdicionales === 'string') {
+                    serviciosAdicionales = JSON.parse(serviciosAdicionales);
+                  }
+                  const servicios = serviciosAdicionales?.servicios as any[] || [];
+                  const costoAdicionales = servicios.reduce((sum: number, s: any) => sum + (s.precio || 0), 0);
+
+                  if (costoAdicionales > 0) {
+                    return (
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        marginBottom: '0.75rem',
+                        fontSize: '1rem'
+                      }}>
+                        <span style={{ fontWeight: '500' }}>Servicios Adicionales:</span>
+                        <span style={{ fontWeight: '600' }}>S/ {costoAdicionales.toFixed(2)}</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                } catch {
+                  return null;
+                }
+              })()}
+
+              {/* Costo de Repuestos */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '0.75rem',
+                fontSize: '1rem'
+              }}>
+                <span style={{ fontWeight: '500' }}>Costo de Repuestos:</span>
+                <span style={{ fontWeight: '600' }}>S/ {Number(servicio.costoRepuestos || 0).toFixed(2)}</span>
+              </div>
+
+              {/* Separador */}
+              <div style={{
+                borderTop: '2px solid #d1d5db',
+                marginTop: '0.75rem',
+                marginBottom: '0.75rem'
+              }}></div>
+
+              {/* Total Acumulado (equipos + servicios adicionales + repuestos) */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '0.75rem',
+                fontSize: '1.125rem'
+              }}>
+                <span style={{ fontWeight: '600' }}>TOTAL ACUMULADO:</span>
+                <span style={{ fontWeight: '700', color: '#059669' }}>
+                  S/ {(() => {
+                    try {
+                      let serviciosAdicionales: any = servicio.serviciosAdicionales;
+                      if (typeof serviciosAdicionales === 'string') {
+                        serviciosAdicionales = JSON.parse(serviciosAdicionales);
+                      }
+                      const servicios = serviciosAdicionales?.servicios as any[] || [];
+                      const costoAdicionales = servicios.reduce((sum: number, s: any) => sum + (s.precio || 0), 0);
+                      return (Number(servicio.costoServicio || 0) + costoAdicionales + Number(servicio.costoRepuestos || 0)).toFixed(2);
+                    } catch {
+                      return (Number(servicio.costoServicio || 0) + Number(servicio.costoRepuestos || 0)).toFixed(2);
+                    }
+                  })()}
+                </span>
+              </div>
+
+              {/* A Cuenta (Pagado) */}
+              {Number(servicio.aCuenta || 0) > 0 && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '0.75rem',
+                  fontSize: '1rem'
+                }}>
+                  <span style={{ fontWeight: '500' }}>A Cuenta (Pagado):</span>
+                  <span style={{ fontWeight: '600', color: '#059669' }}>S/ {Number(servicio.aCuenta || 0).toFixed(2)}</span>
+                </div>
+              )}
+
+              {/* Saldo Pendiente (Total Acumulado - A Cuenta) */}
+              {(() => {
+                try {
+                  let serviciosAdicionales: any = servicio.serviciosAdicionales;
+                  if (typeof serviciosAdicionales === 'string') {
+                    serviciosAdicionales = JSON.parse(serviciosAdicionales);
+                  }
+                  const servicios = serviciosAdicionales?.servicios as any[] || [];
+                  const costoAdicionales = servicios.reduce((sum: number, s: any) => sum + (s.precio || 0), 0);
+                  const totalAcumulado = Number(servicio.costoServicio || 0) + costoAdicionales + Number(servicio.costoRepuestos || 0);
+                  const saldoPendiente = totalAcumulado - Number(servicio.aCuenta || 0);
+
+                  if (saldoPendiente > 0) {
+                    return (
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        marginBottom: '0.75rem',
+                        fontSize: '1rem'
+                      }}>
+                        <span style={{ fontWeight: '500' }}>Saldo Pendiente:</span>
+                        <span style={{ fontWeight: '600', color: '#dc2626' }}>S/ {saldoPendiente.toFixed(2)}</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                } catch {
+                  const totalAcumulado = Number(servicio.costoServicio || 0) + Number(servicio.costoRepuestos || 0);
+                  const saldoPendiente = totalAcumulado - Number(servicio.aCuenta || 0);
+
+                  if (saldoPendiente > 0) {
+                    return (
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        marginBottom: '0.75rem',
+                        fontSize: '1rem'
+                      }}>
+                        <span style={{ fontWeight: '500' }}>Saldo Pendiente:</span>
+                        <span style={{ fontWeight: '600', color: '#dc2626' }}>S/ {saldoPendiente.toFixed(2)}</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                }
+              })()}
+            </div>
+          </div>
+
           {/* FOTOS DEL RESULTADO */}
           {servicio.fotosDespues && servicio.fotosDespues.length > 0 && (
             <div style={{
@@ -1642,7 +1940,8 @@ useEffect(() => {
                 backgroundColor: 'white',
                 padding: isMobile ? '1rem' : '2rem',
                 borderRadius: '8px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                border: '2px solid #10b981'
               }}>
                 <h2 style={{
                   fontSize: isMobile ? '1.25rem' : '1.5rem',
@@ -1651,7 +1950,7 @@ useEffect(() => {
                   borderBottom: '2px solid #e5e7eb',
                   paddingBottom: '0.5rem'
                 }}>
-                  💰 RESUMEN FINAL DE PAGOS
+                  💰 RESUMEN FINAL (TODO EL SERVICIO)
                 </h2>
                 <div style={{
                   backgroundColor: '#f9fafb',
@@ -1659,58 +1958,132 @@ useEffect(() => {
                   borderRadius: '8px',
                   border: '2px solid #e5e7eb'
                 }}>
+                  <div style={{
+                    backgroundColor: '#d1fae5',
+                    padding: '0.75rem',
+                    borderRadius: '6px',
+                    marginBottom: '1rem',
+                    fontSize: '0.875rem',
+                    color: '#065f46',
+                    fontWeight: '500'
+                  }}>
+                    ℹ️ Total completo: Equipos + Servicios Adicionales + Repuestos + Productos Vendidos
+                  </div>
+
+                  {/* Total de Servicios (Equipos) */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '1rem' }}>
-                    <span style={{ fontWeight: '500' }}>Costo del Servicio:</span>
+                    <span style={{ fontWeight: '500' }}>Total de Servicios:</span>
                     <span style={{ fontWeight: '600' }}>S/ {Number(servicio.costoServicio || 0).toFixed(2)}</span>
                   </div>
+
+                  {/* Total de Servicios Adicionales (si hay) */}
+                  {(() => {
+                    try {
+                      let serviciosAdicionales: any = servicio.serviciosAdicionales;
+                      if (typeof serviciosAdicionales === 'string') {
+                        serviciosAdicionales = JSON.parse(serviciosAdicionales);
+                      }
+                      const servicios = serviciosAdicionales?.servicios as any[] || [];
+                      const costoAdicionales = servicios.reduce((sum: number, s: any) => sum + (s.precio || 0), 0);
+
+                      if (costoAdicionales > 0) {
+                        return (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '1rem' }}>
+                            <span style={{ fontWeight: '500' }}>Total de Servicios Adicionales:</span>
+                            <span style={{ fontWeight: '600' }}>S/ {costoAdicionales.toFixed(2)}</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    } catch {
+                      return null;
+                    }
+                  })()}
+
+                  {/* Total de Repuestos */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '1rem' }}>
-                    <span style={{ fontWeight: '500' }}>Repuestos:</span>
+                    <span style={{ fontWeight: '500' }}>Total de Repuestos:</span>
                     <span style={{ fontWeight: '600' }}>S/ {Number(servicio.costoRepuestos || 0).toFixed(2)}</span>
                   </div>
+
+                  {/* Total de Productos Vendidos (si hay) */}
                   {servicio.productosVendidos && servicio.productosVendidos.length > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '1rem' }}>
-                      <span style={{ fontWeight: '500', color: '#3b82f6' }}>Productos Adicionales:</span>
+                      <span style={{ fontWeight: '500', color: '#3b82f6' }}>Total de Productos Vendidos:</span>
                       <span style={{ fontWeight: '600', color: '#3b82f6' }}>
                         S/ {servicio.productosVendidos.reduce((sum: number, item: any) => sum + (Number(item.subtotal) || (item.cantidad * item.precioUnit) || 0), 0).toFixed(2)}
                       </span>
                     </div>
                   )}
-                  <div style={{ borderTop: '2px solid #d1d5db', paddingTop: '0.75rem', marginTop: '0.75rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '1.25rem' }}>
-                      <span style={{ fontWeight: '700' }}>TOTAL:</span>
-                      <span style={{ fontWeight: '700', color: '#10b981' }}>S/ {Number(servicio.total || 0).toFixed(2)}</span>
+
+                  {/* Separador */}
+                  <div style={{ borderTop: '2px solid #d1d5db', marginTop: '0.75rem', marginBottom: '0.75rem' }}></div>
+
+                  {/* TOTAL GENERAL (calculado correctamente) */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '1.25rem' }}>
+                    <span style={{ fontWeight: '700' }}>TOTAL GENERAL:</span>
+                    <span style={{ fontWeight: '700', color: '#10b981' }}>
+                      S/ {(() => {
+                        try {
+                          let serviciosAdicionales: any = servicio.serviciosAdicionales;
+                          if (typeof serviciosAdicionales === 'string') {
+                            serviciosAdicionales = JSON.parse(serviciosAdicionales);
+                          }
+                          const servicios = serviciosAdicionales?.servicios as any[] || [];
+                          const costoAdicionales = servicios.reduce((sum: number, s: any) => sum + (s.precio || 0), 0);
+                          const costoProductos = servicio.productosVendidos?.reduce((sum: number, item: any) => sum + (Number(item.subtotal) || (item.cantidad * item.precioUnit) || 0), 0) || 0;
+
+                          return (Number(servicio.costoServicio || 0) + costoAdicionales + Number(servicio.costoRepuestos || 0) + costoProductos).toFixed(2);
+                        } catch {
+                          return Number(servicio.total || 0).toFixed(2);
+                        }
+                      })()}
+                    </span>
+                  </div>
+
+                  {/* Separador */}
+                  <div style={{ borderTop: '1px solid #d1d5db', marginBottom: '0.75rem' }}></div>
+
+                  {/* Pagado */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '1rem' }}>
+                    <span style={{ fontWeight: '600' }}>Pagado:</span>
+                    <span style={{ fontWeight: '600', color: '#3b82f6' }}>S/ {Number(servicio.aCuenta || 0).toFixed(2)}</span>
+                  </div>
+
+                  {/* Separador */}
+                  <div style={{ borderTop: '2px solid #d1d5db', marginTop: '0.75rem', marginBottom: '0.75rem' }}></div>
+
+                  {/* SALDO */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.25rem' }}>
+                    <span style={{ fontWeight: '700' }}>SALDO PENDIENTE:</span>
+                    <span style={{ fontWeight: '700', color: Number(servicio.saldo) > 0 ? '#ef4444' : '#10b981' }}>
+                      S/ {Number(servicio.saldo || 0).toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* Método de pago del saldo */}
+                  {servicio.metodoPagoSaldo && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                      <span>Método de pago del saldo:</span>
+                      <span style={{ fontWeight: '600' }}>{servicio.metodoPagoSaldo}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '1rem' }}>
-                      <span style={{ fontWeight: '600' }}>Pagado:</span>
-                      <span style={{ fontWeight: '600', color: '#3b82f6' }}>S/ {Number(servicio.aCuenta || 0).toFixed(2)}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid #d1d5db' }}>
-                      <span style={{ fontWeight: '700' }}>SALDO:</span>
-                      <span style={{ fontWeight: '700', color: Number(servicio.saldo) > 0 ? '#ef4444' : '#10b981' }}>
-                        S/ {Number(servicio.saldo || 0).toFixed(2)}
+                  )}
+
+                  {/* Último pago registrado */}
+                  {servicio.fechaUltimoPago && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                      <span>Último pago registrado:</span>
+                      <span style={{ fontWeight: '600' }}>
+                        {new Date(servicio.fechaUltimoPago).toLocaleDateString('es-PE', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                       </span>
                     </div>
-                    {servicio.metodoPagoSaldo && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                        <span>Método de pago del saldo:</span>
-                        <span style={{ fontWeight: '600' }}>{servicio.metodoPagoSaldo}</span>
-                      </div>
-                    )}
-                    {servicio.fechaUltimoPago && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                        <span>Último pago registrado:</span>
-                        <span style={{ fontWeight: '600' }}>
-                          {new Date(servicio.fechaUltimoPago).toLocaleDateString('es-PE', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             </>
@@ -1850,6 +2223,378 @@ useEffect(() => {
             onClose={handleModalRegistrarPagoClose}
             servicio={servicio}
           />
+
+          {/* ✅ NUEVO: Modal Ver Detalle Equipo */}
+          {isModalVerEquipoOpen && equipoSeleccionado && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 1000,
+              padding: '1rem'
+            }} onClick={() => {
+              setIsModalVerEquipoOpen(false)
+              setEquipoSeleccionado(null)
+            }}>
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                maxWidth: isMobile ? '95vw' : '600px',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                padding: isMobile ? '1.5rem' : '2rem',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+              }} onClick={(e) => e.stopPropagation()}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '1.5rem'
+                }}>
+                  <h3 style={{
+                    fontSize: isMobile ? '1.25rem' : '1.5rem',
+                    fontWeight: '600',
+                    margin: 0
+                  }}>
+                    💻 Equipo #{equipoSeleccionado.index + 1}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setIsModalVerEquipoOpen(false)
+                      setEquipoSeleccionado(null)
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '1.5rem',
+                      cursor: 'pointer',
+                      color: '#6b7280',
+                      padding: '0'
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* DATOS BÁSICOS DEL EQUIPO */}
+                <div style={{
+                  marginBottom: '1.25rem'
+                }}>
+                  <h4 style={{
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    margin: '0 0 0.75rem 0',
+                    paddingBottom: '0.5rem',
+                    borderBottom: '2px solid #e5e7eb'
+                  }}>
+                    📱 Datos del Equipo
+                  </h4>
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                    gap: '0.9rem'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem', fontWeight: '600' }}>Tipo</div>
+                      <div style={{ fontSize: '1rem', fontWeight: '500' }}>{equipoSeleccionado.tipoEquipo || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem', fontWeight: '600' }}>Marca</div>
+                      <div style={{ fontSize: '1rem', fontWeight: '500' }}>{equipoSeleccionado.marcaModelo?.split(' ')[0] || 'N/A'}</div>
+                    </div>
+                    <div style={{ gridColumn: isMobile ? '1fr' : '1 / -1' }}>
+                      <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem', fontWeight: '600' }}>Descripción</div>
+                      <div style={{ fontSize: '1rem', fontWeight: '500' }}>{equipoSeleccionado.descripcionEquipo || 'N/A'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ESTADO DE RECEPCIÓN */}
+                <div style={{
+                  marginBottom: '1.25rem'
+                }}>
+                  <h4 style={{
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    margin: '0 0 0.75rem 0',
+                    paddingBottom: '0.5rem',
+                    borderBottom: '2px solid #e5e7eb'
+                  }}>
+                    ✅ Estado de Recepción
+                  </h4>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? 'repeat(auto-fit, minmax(140px, 1fr))' : 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gap: '0.8rem'
+                  }}>
+                    {equipoSeleccionado.dejoSinCargador && (
+                      <div style={{
+                        padding: '0.6rem',
+                        backgroundColor: '#fee2e2',
+                        color: '#dc2626',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        textAlign: 'center',
+                        border: '2px solid #fca5a5'
+                      }}>
+                        ⚠️ Sin cargador
+                      </div>
+                    )}
+                    {equipoSeleccionado.conCargador && (
+                      <div style={{
+                        padding: '0.6rem',
+                        backgroundColor: '#dcfce7',
+                        color: '#166534',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        textAlign: 'center',
+                        border: '2px solid #86efac'
+                      }}>
+                        🔌 Dejó cargador
+                      </div>
+                    )}
+                    {equipoSeleccionado.dejoAccesorios && (
+                      <div style={{
+                        padding: '0.6rem',
+                        backgroundColor: '#dbeafe',
+                        color: '#1e40af',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        textAlign: 'center',
+                        border: '2px solid #93c5fd'
+                      }}>
+                        📦 Con accesorios
+                      </div>
+                    )}
+                    {equipoSeleccionado.faltaPernos && (
+                      <div style={{
+                        padding: '0.6rem',
+                        backgroundColor: '#fee2e2',
+                        color: '#dc2626',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        textAlign: 'center',
+                        border: '2px solid #fca5a5'
+                      }}>
+                        🔩 Falta pernos
+                      </div>
+                    )}
+                    {equipoSeleccionado.tieneAranaduras && (
+                      <div style={{
+                        padding: '0.6rem',
+                        backgroundColor: '#fee2e2',
+                        color: '#dc2626',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        textAlign: 'center',
+                        border: '2px solid #fca5a5'
+                      }}>
+                        ⚠️ Arañaduras
+                      </div>
+                    )}
+                    {equipoSeleccionado.esCotizacion && (
+                      <div style={{
+                        padding: '0.6rem',
+                        backgroundColor: '#fef3c7',
+                        color: '#92400e',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        textAlign: 'center',
+                        border: '2px solid #fde68a'
+                      }}>
+                        📋 Es cotización
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* PROBLEMAS */}
+                <div style={{
+                  marginBottom: '1.25rem'
+                }}>
+                  <h4 style={{
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    margin: '0 0 0.75rem 0',
+                    paddingBottom: '0.5rem',
+                    borderBottom: '2px solid #e5e7eb'
+                  }}>
+                    🔧 Problemas
+                  </h4>
+
+                  {(() => {
+                    const problemas = equipoSeleccionado?.problemasSeleccionados || [];
+                    const tieneProblemas = Array.isArray(problemas) && problemas.length > 0;
+
+                    return (
+                      <>
+                        {tieneProblemas && (
+                          <div style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '0.5rem',
+                            marginBottom: '0.75rem'
+                          }}>
+                            {problemas.map((problema: any, idx: number) => (
+                              <span key={idx} style={{
+                                padding: '0.5rem 0.9rem',
+                                backgroundColor: '#dbeafe',
+                                color: '#1e40af',
+                                borderRadius: '6px',
+                                fontSize: '0.875rem',
+                                fontWeight: '500',
+                                border: '2px solid #93c5fd'
+                              }}>
+                                ✓ {problema.nombre || problema}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {equipoSeleccionado.otrosProblemas && (
+                          <div>
+                            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem', fontWeight: '600' }}>
+                              Descripción:
+                            </div>
+                            <div style={{
+                              padding: '0.75rem',
+                              backgroundColor: '#f9fafb',
+                              borderRadius: '6px',
+                              fontSize: '0.95rem',
+                              border: '1px solid #e5e7eb',
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                              color: '#374151'
+                            }}>
+                              {equipoSeleccionado.otrosProblemas}
+                            </div>
+                          </div>
+                        )}
+
+                        {!tieneProblemas && !equipoSeleccionado.otrosProblemas && (
+                          <div style={{
+                            padding: '0.75rem',
+                            backgroundColor: '#f9fafb',
+                            borderRadius: '6px',
+                            fontSize: '0.875rem',
+                            color: '#6b7280',
+                            textAlign: 'center',
+                            fontStyle: 'italic'
+                          }}>
+                            No se especificaron problemas
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* DETALLES Y COSTO */}
+                <div style={{
+                  marginBottom: '1.25rem'
+                }}>
+                  <h4 style={{
+                    fontSize: '0.95rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    margin: '0 0 0.75rem 0',
+                    paddingBottom: '0.5rem',
+                    borderBottom: '2px solid #e5e7eb'
+                  }}>
+                    📝 Detalles y Costo
+                  </h4>
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                    gap: '0.9rem'
+                  }}>
+                    <div style={{ gridColumn: isMobile ? '1fr' : '1 / -1' }}>
+                      <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem', fontWeight: '600' }}>
+                        Otros Detalles
+                      </div>
+                      <div style={{
+                        padding: '0.75rem',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '6px',
+                        fontSize: '0.95rem',
+                        border: '1px solid #e5e7eb',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        color: '#374151',
+                        minHeight: '2.5rem'
+                      }}>
+                        {equipoSeleccionado.otrosDetalles || 'Sin detalles adicionales'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem', fontWeight: '600' }}>
+                        💰 Costo del Servicio
+                      </div>
+                      <div style={{
+                        padding: '0.75rem',
+                        backgroundColor: '#ecfdf5',
+                        borderRadius: '6px',
+                        fontSize: '1.5rem',
+                        fontWeight: '700',
+                        color: '#059669',
+                        border: '2px solid #10b981',
+                        textAlign: 'center'
+                      }}>
+                        S/ {(equipoSeleccionado.costoServicio || 0).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+
+                {/* Botón Cerrar */}
+                <div style={{
+                  marginTop: '1.5rem',
+                  display: 'flex',
+                  justifyContent: 'flex-end'
+                }}>
+                  <button
+                    onClick={() => {
+                      setIsModalVerEquipoOpen(false)
+                      setEquipoSeleccionado(null)
+                    }}
+                    style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4b5563'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6b7280'}
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
