@@ -297,7 +297,10 @@ export default function ProductosPage() {
       const data = await response.json()
 
       if (data.success) {
-        alert('Producto creado correctamente')
+        const mensaje = formNuevo.sedeId === 'TODAS'
+          ? `✅ Producto creado correctamente en ${data.sedesCreadas || sedes.length} sede(s)`
+          : 'Producto creado correctamente'
+        alert(mensaje)
         await cargarDatosIniciales()
         setMostrarModalNuevo(false)
         setFormNuevo({
@@ -1464,6 +1467,7 @@ export default function ProductosPage() {
                     cursor: esAdmin ? 'pointer' : 'not-allowed'
                   }}
                 >
+                  {esAdmin && <option value="TODAS">🏢 Todas las Sedes</option>}
                   {sedes.map(sede => (
                     <option key={sede.id} value={sede.id}>{sede.nombre}</option>
                   ))}
@@ -1472,6 +1476,19 @@ export default function ProductosPage() {
                   <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
                     Solo puedes agregar productos a tu sede
                   </p>
+                )}
+                {formNuevo.sedeId === 'TODAS' && (
+                  <div style={{
+                    marginTop: '0.75rem',
+                    padding: '0.75rem',
+                    backgroundColor: '#d1fae5',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem',
+                    color: '#065f46',
+                    border: '2px solid #10b981'
+                  }}>
+                    🏢 <strong>Todas las Sedes:</strong> El producto se creará con <strong>el mismo stock inicial en todas las sedes simultáneamente</strong>.
+                  </div>
                 )}
               </div>
               <div>

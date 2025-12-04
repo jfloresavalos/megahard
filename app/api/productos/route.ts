@@ -145,30 +145,75 @@ export async function POST(request: Request) {
 
     // Si hay stock inicial, crear el registro en ProductoSede
     if (stockInicial && parseInt(stockInicial) > 0 && sedeId) {
-      await prisma.productoSede.create({
-        data: {
-          productoId: producto.id,
-          sedeId: sedeId,
-          stock: parseInt(stockInicial)
-        }
-      })
+      // ✅ Caso: TODAS las sedes
+      if (sedeId === 'TODAS') {
+        // Obtener todas las sedes
+        const todasLasSedes = await prisma.sede.findMany({
+          where: { activo: true },
+          select: { id: true, nombre: true }
+        })
 
-      // Registrar movimiento de stock inicial
-      await prisma.movimientoStock.create({
-        data: {
-          productoId: producto.id,
-          sedeId: sedeId,
-          tipo: 'ENTRADA',
-          cantidad: parseInt(stockInicial),
-          stockAntes: 0,
-          stockDespues: parseInt(stockInicial),
-          motivo: 'Stock inicial del producto',
-          fecha: new Date()
-        }
-      })
+        // Crear ProductoSede y movimientoStock para cada sede
+        await Promise.all(
+          todasLasSedes.map(async (sede) => {
+            // Crear ProductoSede
+            await prisma.productoSede.create({
+              data: {
+                productoId: producto.id,
+                sedeId: sede.id,
+                stock: parseInt(stockInicial)
+              }
+            })
+
+            // Registrar movimiento de stock inicial
+            await prisma.movimientoStock.create({
+              data: {
+                productoId: producto.id,
+                sedeId: sede.id,
+                tipo: 'ENTRADA',
+                cantidad: parseInt(stockInicial),
+                stockAntes: 0,
+                stockDespues: parseInt(stockInicial),
+                motivo: 'Stock inicial del producto (todas las sedes)',
+                fecha: new Date()
+              }
+            })
+          })
+        )
+
+        return NextResponse.json({
+          success: true,
+          message: `Producto creado correctamente en ${todasLasSedes.length} sedes`,
+          producto,
+          sedesCreadas: todasLasSedes.length
+        })
+      } else {
+        // ✅ Caso: UNA sede específica
+        await prisma.productoSede.create({
+          data: {
+            productoId: producto.id,
+            sedeId: sedeId,
+            stock: parseInt(stockInicial)
+          }
+        })
+
+        // Registrar movimiento de stock inicial
+        await prisma.movimientoStock.create({
+          data: {
+            productoId: producto.id,
+            sedeId: sedeId,
+            tipo: 'ENTRADA',
+            cantidad: parseInt(stockInicial),
+            stockAntes: 0,
+            stockDespues: parseInt(stockInicial),
+            motivo: 'Stock inicial del producto',
+            fecha: new Date()
+          }
+        })
+      }
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Producto creado correctamente',
       producto
