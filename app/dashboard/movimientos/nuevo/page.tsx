@@ -61,7 +61,11 @@ export default function NuevoMovimientoPage() {
   // ✅ Cargar productos cuando se selecciona una sede
   useEffect(() => {
     if (formData.sedeId) {
-      cargarProductosPorSede(formData.sedeId)
+      if (formData.sedeId === 'TODAS') {
+        cargarTodosLosProductos()
+      } else {
+        cargarProductosPorSede(formData.sedeId)
+      }
     } else {
       setProductos([])
     }
@@ -75,7 +79,7 @@ export default function NuevoMovimientoPage() {
       const sessionData = await resSession.json()
 
       if (sessionData?.user) {
-        setEsAdmin(sessionData.user.rol === 'ADMIN')
+        setEsAdmin(sessionData.user.rol?.toLowerCase() === 'admin')
         const resUsuario = await fetch(`/api/usuarios/${sessionData.user.id}`)
         const usuarioData = await resUsuario.json()
         if (usuarioData.success && usuarioData.usuario.sedeId) {
@@ -109,6 +113,23 @@ export default function NuevoMovimientoPage() {
       const dataProductos = await resProductos.json()
       if (dataProductos.success) {
         setProductos(dataProductos.productos || [])
+      }
+    } catch (error) {
+      console.error('Error al cargar productos:', error)
+    }
+  }
+
+  // ✅ Función para cargar todos los productos (sin duplicados)
+  const cargarTodosLosProductos = async () => {
+    try {
+      const resProductos = await fetch('/api/productos')
+      const dataProductos = await resProductos.json()
+      if (dataProductos.success) {
+        // Eliminar duplicados por ID de producto
+        const productosUnicos = Array.from(
+          new Map(dataProductos.productos.map((p: Producto) => [p.id, p])).values()
+        ) as Producto[]
+        setProductos(productosUnicos)
       }
     } catch (error) {
       console.error('Error al cargar productos:', error)
@@ -195,29 +216,62 @@ export default function NuevoMovimientoPage() {
     try {
       setGuardando(true)
 
-      const response = await fetch('/api/movimientos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sedeId: formData.sedeId,
-          tipo: formData.tipo,
-          lineas: lineas.map(l => ({
-            productoId: l.productoId,
-            cantidad: l.cantidad
-          })),
-          motivo: formData.motivo || null,
-          referencia: formData.referencia || null,
-          observaciones: formData.observaciones || null
-        })
-      })
+      // ✅ Si es "TODAS", hacer movimientos para cada sede
+      if (formData.sedeId === 'TODAS') {
+        const promesas = sedes.map(sede =>
+          fetch('/api/movimientos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sedeId: sede.id,
+              tipo: formData.tipo,
+              lineas: lineas.map(l => ({
+                productoId: l.productoId,
+                cantidad: l.cantidad
+              })),
+              motivo: formData.motivo || null,
+              referencia: formData.referencia || null,
+              observaciones: `${formData.observaciones || ''} [Movimiento aplicado a todas las sedes]`.trim()
+            })
+          }).then(res => res.json())
+        )
 
-      const data = await response.json()
+        const resultados = await Promise.all(promesas)
+        const exitosos = resultados.filter(r => r.success).length
+        const fallidos = resultados.filter(r => !r.success)
 
-      if (data.success) {
-        alert('✅ Movimiento registrado correctamente')
-        router.push('/dashboard/movimientos')
+        if (fallidos.length === 0) {
+          alert(`✅ Movimiento registrado correctamente en ${exitosos} sede(s)`)
+          router.push('/dashboard/movimientos')
+        } else {
+          alert(`⚠️ Movimiento registrado en ${exitosos} sede(s). Errores en ${fallidos.length} sede(s):\n${fallidos.map(f => f.error).join('\n')}`)
+        }
       } else {
-        alert(`❌ ${data.error}`)
+        // Movimiento para una sola sede
+        const response = await fetch('/api/movimientos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sedeId: formData.sedeId,
+            tipo: formData.tipo,
+            lineas: lineas.map(l => ({
+              productoId: l.productoId,
+              cantidad: l.cantidad
+            })),
+            motivo: formData.motivo || null,
+            referencia: formData.referencia || null,
+            observaciones: formData.observaciones || null
+          })
+        })
+
+        const data = await response.json()
+
+        if (data.success) {
+          alert('✅ Movimiento registrado correctamente')
+          router.push('/dashboard/movimientos')
+        } else {
+          alert(`❌ ${data.error}`)
+        }
       }
 
     } catch (error) {
@@ -311,6 +365,7 @@ export default function NuevoMovimientoPage() {
                   }}
                 >
                   <option value="">Seleccionar sede...</option>
+                  <option value="TODAS" style={{ fontWeight: 'bold', color: '#10b981' }}>🏢 Todas las Sedes</option>
                   {sedes.map(sede => (
                     <option key={sede.id} value={sede.id}>{sede.nombre}</option>
                   ))}
@@ -367,6 +422,20 @@ export default function NuevoMovimientoPage() {
               </select>
             </div>
           </div>
+
+          {formData.sedeId === 'TODAS' && (
+            <div style={{
+              marginTop: '0.75rem',
+              padding: '0.75rem',
+              backgroundColor: '#d1fae5',
+              borderRadius: '6px',
+              fontSize: '0.875rem',
+              color: '#065f46',
+              border: '2px solid #10b981'
+            }}>
+              🏢 <strong>Todas las Sedes:</strong> Este movimiento se aplicará a <strong>todas las sedes simultáneamente</strong>. Los productos se agregarán/ajustarán en cada sede.
+            </div>
+          )}
 
           {formData.tipo && (
             <>

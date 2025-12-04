@@ -15,6 +15,9 @@ interface Servicio {
   total: number
   saldo: number
   createdAt: string
+  motivoCancelacion?: string | null
+  observacionCancelacion?: string | null
+  fechaCancelacion?: string | null
   tecnico?: {
     nombre: string
   }
@@ -630,6 +633,57 @@ export default function ServiciosTecnicosPage() {
                   {servicio.prioridad === 'URGENTE' && '🔴 URGENTE'}
                   {servicio.prioridad === 'ALTA' && '🟠 PRIORIDAD ALTA'}
                   {servicio.prioridad === 'BAJA' && '🔵 PRIORIDAD BAJA'}
+                </div>
+              )}
+
+              {/* Información de Cancelación */}
+              {servicio.estado === 'CANCELADO' && servicio.fechaCancelacion && (
+                <div style={{
+                  marginTop: '0.75rem',
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  backgroundColor: '#fef2f2',
+                  border: '2px solid #dc2626'
+                }}>
+                  <div style={{
+                    fontSize: '0.85rem',
+                    fontWeight: '700',
+                    color: '#dc2626',
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    ❌ Servicio Cancelado
+                  </div>
+
+                  {servicio.motivoCancelacion && (
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#991b1b',
+                      marginBottom: '0.25rem'
+                    }}>
+                      <strong>Motivo:</strong> {servicio.motivoCancelacion}
+                    </div>
+                  )}
+
+                  {servicio.observacionCancelacion && (
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#991b1b',
+                      marginBottom: '0.25rem'
+                    }}>
+                      <strong>Observación:</strong> {servicio.observacionCancelacion}
+                    </div>
+                  )}
+
+                  <div style={{
+                    fontSize: '0.7rem',
+                    color: '#7f1d1d',
+                    marginTop: '0.5rem'
+                  }}>
+                    📅 Cancelado el: {formatearFecha(servicio.fechaCancelacion)}
+                  </div>
                 </div>
               )}
             </div>

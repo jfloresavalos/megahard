@@ -84,6 +84,14 @@ export async function GET(
         quienRecibeDni: true,
         productosVendidos: true,
 
+        // Cancelación
+        motivoCancelacion: true,
+        observacionCancelacion: true,
+        fechaCancelacion: true,
+        adelantoDevuelto: true,
+        metodoDevolucion: true,
+        usuarioCancelacionId: true,
+
         // Usuario y Sede
         usuarioId: true,
         usuario: {
