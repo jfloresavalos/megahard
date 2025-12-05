@@ -15,6 +15,10 @@ interface Servicio {
   total: number
   saldo: number
   createdAt: string
+  fechaRecepcion?: string | null
+  fechaReparacion?: string | null
+  diagnostico?: string | null
+  solucion?: string | null
   motivoCancelacion?: string | null
   observacionCancelacion?: string | null
   fechaCancelacion?: string | null
@@ -301,6 +305,7 @@ export default function ServiciosTecnicosPage() {
               <option value="TODOS">Todos</option>
               <option value="TALLER">🔧 Taller</option>
               <option value="DOMICILIO">🏠 Domicilio</option>
+              <option value="EXPRESS">⚡ Express</option>
             </select>
           </div>
 
@@ -516,11 +521,11 @@ export default function ServiciosTecnicosPage() {
                     borderRadius: '6px',
                     fontSize: '0.65rem',
                     fontWeight: '600',
-                    backgroundColor: servicio.tipoServicio === 'DOMICILIO' ? '#10b98120' : '#3b82f620',
-                    color: servicio.tipoServicio === 'DOMICILIO' ? '#10b981' : '#3b82f6',
-                    border: `1px solid ${servicio.tipoServicio === 'DOMICILIO' ? '#10b981' : '#3b82f6'}`
+                    backgroundColor: servicio.tipoServicio === 'EXPRESS' ? '#fef3c7' : servicio.tipoServicio === 'DOMICILIO' ? '#10b98120' : '#3b82f620',
+                    color: servicio.tipoServicio === 'EXPRESS' ? '#f59e0b' : servicio.tipoServicio === 'DOMICILIO' ? '#10b981' : '#3b82f6',
+                    border: `1px solid ${servicio.tipoServicio === 'EXPRESS' ? '#f59e0b' : servicio.tipoServicio === 'DOMICILIO' ? '#10b981' : '#3b82f6'}`
                   }}>
-                    {servicio.tipoServicio === 'DOMICILIO' ? '🏠 DOM' : '🔧 TALL'}
+                    {servicio.tipoServicio === 'EXPRESS' ? '⚡ EXP' : servicio.tipoServicio === 'DOMICILIO' ? '🏠 DOM' : '🔧 TALL'}
                   </div>
                 </div>
                 <div style={{

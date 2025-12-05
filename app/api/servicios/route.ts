@@ -90,7 +90,28 @@ export async function GET(request: Request) {
 
     const servicios = await prisma.servicioTecnico.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        numeroServicio: true,
+        estado: true,
+        prioridad: true,
+        clienteNombre: true,
+        clienteDni: true,
+        clienteCelular: true,
+        tipoEquipo: true,
+        marcaModelo: true,
+        descripcionEquipo: true,
+        total: true,
+        aCuenta: true,
+        saldo: true,
+        fechaRecepcion: true,
+        fechaReparacion: true,
+        diagnostico: true,
+        solucion: true,
+        tipoServicio: true,
+        motivoCancelacion: true,
+        createdAt: true,
+        updatedAt: true,
         cliente: true,
         usuario: {
           select: {
@@ -141,6 +162,7 @@ export async function POST(request: Request) {
       equipos = [], // Array de equipos con sus datos individuales
       fotosServicio = [], // Fotos a nivel de servicio
       serviciosAdicionales,
+      repuestos = [], // ✅ REPUESTOS UTILIZADOS
       metodoPago,
       fechaEstimada,
       garantiaDias,
@@ -148,12 +170,17 @@ export async function POST(request: Request) {
       // ✅ CAMPOS PARA SERVICIOS A DOMICILIO
       tipoServicioForm = 'TALLER', // 'TALLER' o 'DOMICILIO'
       direccionServicio,
-      prioridad = 'NORMAL'
+      prioridad = 'NORMAL',
+      // ✅ CAMPOS PARA SERVICIO EXPRESS
+      esServicioExpress = false,
+      diagnosticoExpress = null,
+      solucionExpress = null
     } = body
 
     console.log('📝 Creando servicio técnico...', tipoServicioForm)
     console.log('📦 Equipos recibidos:', equipos.length) // ✅ DEBUG
     console.log('📸 Fotos del servicio:', fotosServicio.length) // ✅ DEBUG
+    console.log('🔧 Repuestos recibidos:', repuestos.length) // ✅ DEBUG
     console.log('📅 fechaEstimada recibida:', fechaEstimada, 'tipo:', typeof fechaEstimada) // ✅ DEBUG
 
     // ✅ Validar que haya al menos un equipo
@@ -164,8 +191,26 @@ export async function POST(request: Request) {
       }, { status: 400 })
     }
 
+    // ✅ Validar campos obligatorios para servicio express
+    if (tipoServicioForm === 'EXPRESS') {
+      if (!diagnosticoExpress?.trim()) {
+        return NextResponse.json({
+          success: false,
+          error: 'El diagnóstico es obligatorio para servicios express'
+        }, { status: 400 })
+      }
+      if (!solucionExpress?.trim()) {
+        return NextResponse.json({
+          success: false,
+          error: 'La solución es obligatoria para servicios express'
+        }, { status: 400 })
+      }
+    }
+
     // ✅ Determinar prefijo según tipo de servicio
-    const prefijo = tipoServicioForm === 'DOMICILIO' ? 'SD' : 'ST'
+    let prefijo = 'ST' // TALLER por defecto
+    if (tipoServicioForm === 'DOMICILIO') prefijo = 'SD'
+    if (tipoServicioForm === 'EXPRESS') prefijo = 'SE'
 
     // Buscar el último servicio de ESTA sede y tipo específico
     const ultimoServicio = await prisma.servicioTecnico.findFirst({
@@ -269,7 +314,17 @@ export async function POST(request: Request) {
       }, 0)
     }
 
-    const costoTotalNum = costoTotalEquipos + costoServiciosAdicionales
+    // ✅ Calcular costo de repuestos
+    let costoRepuestos = 0
+    if (repuestos && Array.isArray(repuestos)) {
+      costoRepuestos = repuestos.reduce((sum: number, repuesto: any) => {
+        const cantidad = parseFloat(repuesto.cantidad) || 0
+        const precio = parseFloat(repuesto.precioUnit) || 0
+        return sum + (cantidad * precio)
+      }, 0)
+    }
+
+    const costoTotalNum = costoTotalEquipos + costoServiciosAdicionales + costoRepuestos
     const aCuentaNum = parseFloat(aCuenta) || 0
     const saldoNum = costoTotalNum - aCuentaNum
 
@@ -290,7 +345,14 @@ export async function POST(request: Request) {
     }
 
     // ✅ Determinar estado inicial según tipo de servicio
-    const estadoInicial = tipoServicioForm === 'DOMICILIO' ? 'EN_DOMICILIO' : 'RECEPCIONADO'
+    let estadoInicial: string
+    if (tipoServicioForm === 'EXPRESS') {
+      estadoInicial = 'REPARADO'
+    } else if (tipoServicioForm === 'DOMICILIO') {
+      estadoInicial = 'EN_DOMICILIO'
+    } else {
+      estadoInicial = 'RECEPCIONADO'
+    }
 
     // ✅ Usar el PRIMER equipo como referencia para los campos de equipoTecnico
     const primerEquipo = equipos[0]
@@ -346,7 +408,7 @@ export async function POST(request: Request) {
         tieneAranaduras: primerEquipo.tieneAranaduras || false,
         otrosDetalles: primerEquipo.otrosDetalles || '',
         costoServicio: costoTotalEquipos, // ✅ SUMA DE TODOS LOS EQUIPOS
-        costoRepuestos: 0,
+        costoRepuestos: costoRepuestos, // ✅ SUMA DE TODOS LOS REPUESTOS
         total: costoTotalNum,
         aCuenta: aCuentaNum,
         saldo: saldoNum,
@@ -363,7 +425,11 @@ export async function POST(request: Request) {
         prioridad,
         // ✅ CAMPOS PARA SERVICIOS A DOMICILIO
         tipoServicio: tipoServicioForm,
-        direccionServicio: direccionServicio || null
+        direccionServicio: direccionServicio || null,
+        // ✅ CAMPOS PARA SERVICIO EXPRESS
+        diagnostico: tipoServicioForm === 'EXPRESS' ? diagnosticoExpress : null,
+        solucion: tipoServicioForm === 'EXPRESS' ? solucionExpress : null,
+        fechaReparacion: tipoServicioForm === 'EXPRESS' ? new Date() : null
       },
       include: {
         cliente: true,
@@ -380,6 +446,80 @@ export async function POST(request: Request) {
     })
 
     console.log('✅ Servicio creado:', numeroServicio)
+
+    // ✅ Crear entrada en historial
+    await prisma.servicioHistorial.create({
+      data: {
+        servicioId: servicio.id,
+        estadoAnterior: null,
+        estadoNuevo: estadoInicial,
+        comentario: tipoServicioForm === 'EXPRESS'
+          ? `⚡ Servicio Express - Completado inmediatamente. Diagnóstico: ${diagnosticoExpress}. Solución: ${solucionExpress}`
+          : `Servicio ${tipoServicioForm} recepcionado`,
+        usuarioId: tecnicoId
+      }
+    })
+
+    // ✅ Procesar repuestos: crear items, descontar stock y registrar movimientos
+    if (repuestos && Array.isArray(repuestos) && repuestos.length > 0) {
+      console.log('🔧 Procesando', repuestos.length, 'repuestos...')
+
+      for (const repuesto of repuestos) {
+        const { productoId, cantidad, precioUnit } = repuesto
+        const cantidadNum = parseFloat(cantidad) || 0
+        const precioNum = parseFloat(precioUnit) || 0
+        const subtotal = cantidadNum * precioNum
+
+        // Crear ServicioItem
+        await prisma.servicioItem.create({
+          data: {
+            servicioId: servicio.id,
+            productoId: productoId,
+            cantidad: cantidadNum,
+            precioUnit: precioNum,
+            subtotal: subtotal
+          }
+        })
+
+        // Descontar stock del ProductoSede
+        const productoSede = await prisma.productoSede.findFirst({
+          where: {
+            productoId: productoId,
+            sedeId: sedeId
+          }
+        })
+
+        if (productoSede) {
+          await prisma.productoSede.update({
+            where: { id: productoSede.id },
+            data: {
+              stock: {
+                decrement: cantidadNum
+              }
+            }
+          })
+
+          // Crear registro de movimiento de stock
+          await prisma.movimientoStock.create({
+            data: {
+              productoId: productoId,
+              sedeId: sedeId,
+              tipo: 'USO_SERVICIO',
+              cantidad: cantidadNum,
+              stockAntes: productoSede.stock,
+              stockDespues: productoSede.stock - cantidadNum,
+              motivo: 'Repuesto utilizado en reparación',
+              referencia: `Servicio ${numeroServicio}`,
+              usuarioId: tecnicoId
+            }
+          })
+        } else {
+          console.warn(`⚠️ No se encontró ProductoSede para producto ${productoId} en sede ${sedeId}`)
+        }
+      }
+
+      console.log('✅ Repuestos procesados exitosamente')
+    }
 
     // ✅ Los equipos se guardan en serviciosAdicionales como JSON
     // No necesitamos crear ServicioItem individuales para cada equipo

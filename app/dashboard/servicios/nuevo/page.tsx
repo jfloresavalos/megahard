@@ -42,6 +42,23 @@ interface ServicioSeleccionado {
   precio: number
 }
 
+interface Producto {
+  id: string
+  codigo: string
+  nombre: string
+  descripcion: string | null
+  precioVenta: number
+  stock?: number
+}
+
+interface RepuestoSeleccionado {
+  productoId: string
+  producto: Producto
+  cantidad: number
+  precioUnit: number
+  subtotal: number
+}
+
 interface MetodoPago {
   id: string
   nombre: string
@@ -93,7 +110,7 @@ export default function NuevoServicioPage() {
   const [nuevoServicioPrecio, setNuevoServicioPrecio] = useState('0')
 
   // ✅ Tipo de servicio
-  const [tipoServicioForm, setTipoServicioForm] = useState<'TALLER' | 'DOMICILIO'>('TALLER')
+  const [tipoServicioForm, setTipoServicioForm] = useState<'TALLER' | 'DOMICILIO' | 'EXPRESS'>('TALLER')
 
   // Datos del cliente
   const [clienteSeleccionado, setClienteSeleccionado] = useState<any>(null)
@@ -128,6 +145,12 @@ export default function NuevoServicioPage() {
   // Costos
   const [costoServicio, setCostoServicio] = useState('0')
   const [serviciosAdicionales, setServiciosAdicionales] = useState<ServicioSeleccionado[]>([])
+
+  // ✅ REPUESTOS
+  const [productos, setProductos] = useState<Producto[]>([])
+  const [repuestosSeleccionados, setRepuestosSeleccionados] = useState<RepuestoSeleccionado[]>([])
+  const [mostrarSelectorRepuestos, setMostrarSelectorRepuestos] = useState(false)
+  const [busquedaRepuesto, setBusquedaRepuesto] = useState('')
   const [metodoPago, setMetodoPago] = useState('')
   const [aCuenta, setACuenta] = useState('0')
   const [dejaAdelanto, setDejaAdelanto] = useState(false)
@@ -142,6 +165,11 @@ export default function NuevoServicioPage() {
     return `${year}-${month}-${day}`
   })
   const [garantiaDias, setGarantiaDias] = useState('30')
+
+  // ✅ SERVICIO EXPRESS
+  const [esServicioExpress, setEsServicioExpress] = useState(false)
+  const [diagnosticoExpress, setDiagnosticoExpress] = useState('')
+  const [solucionExpress, setSolucionExpress] = useState('')
 
   // Fotos
   const [fotos, setFotos] = useState<File[]>([])
@@ -261,7 +289,9 @@ export default function NuevoServicioPage() {
 
   // Calcular costo total de todos los equipos
   const costoTotalEquipos = equipos.reduce((sum, equipo) => sum + equipo.costoServicio, 0)
-  const saldoTotal = costoTotalEquipos - parseFloat(aCuenta)
+  // ✅ Solo incluir repuestos en el total si es servicio express
+  const costoTotalRepuestos = tipoServicioForm === 'EXPRESS' ? repuestosSeleccionados.reduce((sum, r) => sum + r.subtotal, 0) : 0
+  const saldoTotal = costoTotalEquipos + costoTotalRepuestos - parseFloat(aCuenta)
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -292,6 +322,13 @@ export default function NuevoServicioPage() {
       setTecnicoId(session.user.id) // Auto-asignar en TALLER
     }
   }, [tipoServicioForm, esAdmin, session])
+
+  // ✅ Cargar productos cuando se selecciona una sede
+  useEffect(() => {
+    if (sedeId) {
+      cargarProductos(sedeId)
+    }
+  }, [sedeId])
 
   const cargarDatos = async () => {
     try {
@@ -530,6 +567,56 @@ export default function NuevoServicioPage() {
     setServiciosAdicionales(nuevos)
   }
 
+  // ✅ FUNCIONES PARA REPUESTOS
+  const cargarProductos = async (sedeIdParam: string) => {
+    try {
+      const response = await fetch(`/api/productos?sedeId=${sedeIdParam}`)
+      const data = await response.json()
+      if (data.success) {
+        setProductos(data.productos || [])
+      }
+    } catch (error) {
+      console.error('Error al cargar productos:', error)
+    }
+  }
+
+  const agregarRepuesto = (producto: Producto) => {
+    // Verificar si ya está en la lista
+    const yaExiste = repuestosSeleccionados.find(r => r.productoId === producto.id)
+    if (yaExiste) {
+      alert('Este repuesto ya está agregado. Puedes modificar la cantidad en la lista.')
+      return
+    }
+
+    const nuevoRepuesto: RepuestoSeleccionado = {
+      productoId: producto.id,
+      producto: producto,
+      cantidad: 1,
+      precioUnit: producto.precioVenta,
+      subtotal: producto.precioVenta
+    }
+    setRepuestosSeleccionados([...repuestosSeleccionados, nuevoRepuesto])
+    setMostrarSelectorRepuestos(false)
+  }
+
+  const eliminarRepuesto = (index: number) => {
+    setRepuestosSeleccionados(repuestosSeleccionados.filter((_, i) => i !== index))
+  }
+
+  const actualizarCantidadRepuesto = (index: number, cantidad: number) => {
+    const nuevos = [...repuestosSeleccionados]
+    nuevos[index].cantidad = cantidad
+    nuevos[index].subtotal = cantidad * nuevos[index].precioUnit
+    setRepuestosSeleccionados(nuevos)
+  }
+
+  const actualizarPrecioRepuesto = (index: number, precio: number) => {
+    const nuevos = [...repuestosSeleccionados]
+    nuevos[index].precioUnit = precio
+    nuevos[index].subtotal = nuevos[index].cantidad * precio
+    setRepuestosSeleccionados(nuevos)
+  }
+
   const handleEditarServicioCatalogo = (servicio: any) => {
     // Abrir modal para editar servicio del catálogo
     setNuevoServicioNombre(servicio.nombre)
@@ -704,6 +791,18 @@ export default function NuevoServicioPage() {
       return
     }
 
+    // ✅ Validación para servicio express
+    if (tipoServicioForm === 'EXPRESS') {
+      if (!diagnosticoExpress.trim()) {
+        alert('El diagnóstico es obligatorio para servicios express')
+        return
+      }
+      if (!solucionExpress.trim()) {
+        alert('La solución es obligatoria para servicios express')
+        return
+      }
+    }
+
     setLoading(true)
 
     try {
@@ -758,7 +857,17 @@ export default function NuevoServicioPage() {
           metodoPago: dejaAdelanto ? metodoPago : null,
           fechaEstimada: fechaEstimada ? new Date(fechaEstimada + 'T00:00:00-05:00').toISOString() : null,
           garantiaDias: parseInt(garantiaDias),
-          aCuenta: dejaAdelanto ? (parseFloat(aCuenta) || 0) : 0
+          aCuenta: dejaAdelanto ? (parseFloat(aCuenta) || 0) : 0,
+          // ✅ SERVICIO EXPRESS
+          esServicioExpress: tipoServicioForm === 'EXPRESS',
+          diagnosticoExpress: tipoServicioForm === 'EXPRESS' ? diagnosticoExpress : null,
+          solucionExpress: tipoServicioForm === 'EXPRESS' ? solucionExpress : null,
+          // ✅ REPUESTOS - Solo enviar si es servicio express
+          repuestos: tipoServicioForm === 'EXPRESS' ? repuestosSeleccionados.map(r => ({
+            productoId: r.productoId,
+            cantidad: r.cantidad,
+            precioUnit: r.precioUnit
+          })) : []
         })
       })
 
@@ -836,7 +945,7 @@ export default function NuevoServicioPage() {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr',
             gap: '0.75rem'
           }}>
             <button
@@ -859,7 +968,7 @@ export default function NuevoServicioPage() {
               }}
             >
               <span style={{ fontSize: isMobile ? '1rem' : '1.25rem' }}>🔧</span>
-              <span>Servicio en Taller</span>
+              <span>Taller</span>
             </button>
 
             <button
@@ -882,7 +991,35 @@ export default function NuevoServicioPage() {
               }}
             >
               <span style={{ fontSize: isMobile ? '1rem' : '1.25rem' }}>🏠</span>
-              <span>Servicio a Domicilio</span>
+              <span>Domicilio</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setTipoServicioForm('EXPRESS')
+                setRepuestosSeleccionados([])
+                setMostrarSelectorRepuestos(false)
+                setBusquedaRepuesto('')
+              }}
+              style={{
+                padding: isMobile ? '0.625rem 0.75rem' : '0.75rem 1.25rem',
+                backgroundColor: tipoServicioForm === 'EXPRESS' ? '#f59e0b' : 'white',
+                color: tipoServicioForm === 'EXPRESS' ? 'white' : '#374151',
+                border: `2px solid ${tipoServicioForm === 'EXPRESS' ? '#f59e0b' : '#d1d5db'}`,
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: isMobile ? '0.8rem' : '0.95rem',
+                fontWeight: '600',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <span style={{ fontSize: isMobile ? '1rem' : '1.25rem' }}>⚡</span>
+              <span>Express</span>
             </button>
           </div>
           <p style={{
@@ -891,9 +1028,9 @@ export default function NuevoServicioPage() {
             marginTop: '0.5rem',
             marginBottom: 0
           }}>
-            {tipoServicioForm === 'TALLER'
-              ? 'El cliente deja el equipo en el local'
-              : 'El técnico va a la ubicación del cliente'}
+            {tipoServicioForm === 'TALLER' && 'El cliente deja el equipo en el local'}
+            {tipoServicioForm === 'DOMICILIO' && 'El técnico va a la ubicación del cliente'}
+            {tipoServicioForm === 'EXPRESS' && '⚡ Servicio completado inmediatamente - requiere diagnóstico y solución'}
           </p>
         </div>
 
@@ -1745,6 +1882,367 @@ export default function NuevoServicioPage() {
             </div>
           </div>
 
+          {/* ✅ SERVICIO EXPRESS - Solo mostrar si tipoServicioForm === 'EXPRESS' */}
+          {tipoServicioForm === 'EXPRESS' && (
+            <div style={{
+              backgroundColor: 'white',
+              padding: isMobile ? '0.75rem' : '1.5rem',
+              borderRadius: '8px',
+              marginBottom: isMobile ? '1rem' : '1.5rem',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              border: '2px solid #f59e0b'
+            }}>
+              <div style={{
+                fontSize: isMobile ? '0.95rem' : '1.1rem',
+                fontWeight: '600',
+                color: '#f59e0b',
+                marginBottom: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <span style={{ fontSize: '1.5rem' }}>⚡</span>
+                <span>Servicio Express</span>
+                <span style={{
+                  fontSize: '0.75rem',
+                  backgroundColor: '#fef3c7',
+                  color: '#92400e',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '4px'
+                }}>Completado inmediatamente</span>
+              </div>
+
+              <div style={{
+                backgroundColor: '#fffbeb',
+                border: '1px solid #fcd34d',
+                borderRadius: '6px',
+                padding: isMobile ? '0.75rem' : '1rem'
+              }}>
+                <p style={{ fontSize: '0.875rem', color: '#92400e', marginBottom: '1rem' }}>
+                  ℹ️ <strong>Servicio Express:</strong> El servicio se registrará como REPARADO
+                  y estará listo para entrega. Debe proporcionar el diagnóstico y solución ahora.
+                </p>
+
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                      Diagnóstico <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <textarea
+                      value={diagnosticoExpress}
+                      onChange={(e) => setDiagnosticoExpress(e.target.value)}
+                      placeholder="Describa el diagnóstico del equipo..."
+                      rows={3}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        resize: 'vertical'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                      Solución Aplicada <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <textarea
+                      value={solucionExpress}
+                      onChange={(e) => setSolucionExpress(e.target.value)}
+                      placeholder="Describa la solución aplicada..."
+                      rows={3}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        resize: 'vertical'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                      Fecha de Reparación
+                    </label>
+                    <input
+                      type="text"
+                      value={new Date().toLocaleDateString('es-PE', {
+                        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                      })}
+                      disabled
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        backgroundColor: '#f9fafb',
+                        color: '#6b7280'
+                      }}
+                    />
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                      Se registrará automáticamente la fecha y hora actual
+                    </p>
+                  </div>
+
+                  {/* ✅ REPUESTOS PARA EXPRESS */}
+                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #fcd34d' }}>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      marginBottom: '0.75rem',
+                      color: '#92400e'
+                    }}>
+                      🔧 Repuestos Utilizados (Opcional)
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setMostrarSelectorRepuestos(!mostrarSelectorRepuestos)}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        marginBottom: '0.75rem',
+                        transition: 'all 0.15s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#d97706'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f59e0b'}
+                    >
+                      {mostrarSelectorRepuestos ? '- Cerrar' : '+ Agregar Repuesto'}
+                    </button>
+
+                    {/* SELECTOR DE PRODUCTOS */}
+                    {mostrarSelectorRepuestos && (
+                      <div style={{
+                        border: '1px solid #fcd34d',
+                        borderRadius: '6px',
+                        padding: '0.75rem',
+                        marginBottom: '0.75rem',
+                        backgroundColor: 'white'
+                      }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: '600', marginBottom: '0.5rem', color: '#92400e' }}>
+                          Seleccionar producto:
+                        </div>
+
+                        {/* Buscador */}
+                        <input
+                          type="text"
+                          placeholder="🔍 Buscar por código o nombre..."
+                          value={busquedaRepuesto}
+                          onChange={(e) => setBusquedaRepuesto(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid #fcd34d',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            marginBottom: '0.5rem'
+                          }}
+                        />
+
+                        <div style={{
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.5rem'
+                        }}>
+                          {!busquedaRepuesto.trim() ? (
+                            <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.75rem' }}>
+                              Escribe para buscar productos...
+                            </div>
+                          ) : (
+                            <>
+                              {productos
+                                .filter(producto => {
+                                  const busqueda = busquedaRepuesto.toLowerCase()
+                                  return (
+                                    producto.codigo.toLowerCase().includes(busqueda) ||
+                                    producto.nombre.toLowerCase().includes(busqueda)
+                                  )
+                                })
+                                .map((producto) => (
+                                  <button
+                                    key={producto.id}
+                                    type="button"
+                                    onClick={() => agregarRepuesto(producto)}
+                                    style={{
+                                      padding: '0.5rem',
+                                      backgroundColor: '#fffbeb',
+                                      border: '1px solid #fcd34d',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      textAlign: 'left',
+                                      transition: 'all 0.15s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#fef3c7'
+                                      e.currentTarget.style.borderColor = '#f59e0b'
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#fffbeb'
+                                      e.currentTarget.style.borderColor = '#fcd34d'
+                                    }}
+                                  >
+                                    <div style={{ fontWeight: '600', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                                      {producto.codigo} - {producto.nombre}
+                                    </div>
+                                    <div style={{ fontSize: '0.7rem', color: '#92400e' }}>
+                                      Stock: {producto.stock || 0} | Precio: S/ {producto.precioVenta.toFixed(2)}
+                                    </div>
+                                  </button>
+                                ))}
+                              {productos.filter(producto => {
+                                const busqueda = busquedaRepuesto.toLowerCase()
+                                return (
+                                  producto.codigo.toLowerCase().includes(busqueda) ||
+                                  producto.nombre.toLowerCase().includes(busqueda)
+                                )
+                              }).length === 0 && (
+                                <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.75rem' }}>
+                                  No se encontraron productos
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* LISTA DE REPUESTOS SELECCIONADOS */}
+                    {repuestosSeleccionados.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: '600', marginBottom: '0.5rem', color: '#92400e' }}>
+                          Repuestos agregados:
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {repuestosSeleccionados.map((repuesto, index) => (
+                            <div
+                              key={index}
+                              style={{
+                                border: '1px solid #fcd34d',
+                                borderRadius: '6px',
+                                padding: '0.75rem',
+                                backgroundColor: 'white'
+                              }}
+                            >
+                              <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'flex-start',
+                                marginBottom: '0.5rem'
+                              }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontWeight: '600', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                                    {repuesto.producto.codigo} - {repuesto.producto.nombre}
+                                  </div>
+                                  {repuesto.producto.descripcion && (
+                                    <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                                      {repuesto.producto.descripcion}
+                                    </div>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarRepuesto(index)}
+                                  title="Eliminar repuesto"
+                                  style={{
+                                    padding: '0.25rem 0.4rem',
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.7rem',
+                                    minWidth: '20px',
+                                    height: '20px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                              <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr 1fr',
+                                gap: '0.5rem'
+                              }}>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: '600', marginBottom: '0.25rem', color: '#92400e' }}>
+                                    Cantidad
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={repuesto.cantidad}
+                                    onChange={(e) => actualizarCantidadRepuesto(index, parseInt(e.target.value) || 1)}
+                                    style={{
+                                      width: '100%',
+                                      padding: '0.4rem',
+                                      border: '1px solid #fcd34d',
+                                      borderRadius: '4px',
+                                      fontSize: '0.75rem'
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: '600', marginBottom: '0.25rem', color: '#92400e' }}>
+                                    Precio Unit.
+                                  </label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={repuesto.precioUnit}
+                                    onChange={(e) => actualizarPrecioRepuesto(index, parseFloat(e.target.value) || 0)}
+                                    style={{
+                                      width: '100%',
+                                      padding: '0.4rem',
+                                      border: '1px solid #fcd34d',
+                                      borderRadius: '4px',
+                                      fontSize: '0.75rem'
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: '600', marginBottom: '0.25rem', color: '#92400e' }}>
+                                    Subtotal
+                                  </label>
+                                  <div style={{
+                                    padding: '0.4rem',
+                                    backgroundColor: '#fef3c7',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '600',
+                                    color: '#92400e'
+                                  }}>
+                                    S/ {repuesto.subtotal.toFixed(2)}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* RESUMEN DE TOTALES */}
           <div style={{
             backgroundColor: '#f9fafb',
@@ -1774,6 +2272,19 @@ export default function NuevoServicioPage() {
               <span style={{ fontWeight: '600' }}>S/ {costoTotalEquipos.toFixed(2)}</span>
             </div>
 
+            {/* ✅ Solo mostrar repuestos si es servicio express */}
+            {tipoServicioForm === 'EXPRESS' && costoTotalRepuestos > 0 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '0.75rem',
+                fontSize: 'clamp(0.875rem, 2vw, 1rem)'
+              }}>
+                <span style={{ fontWeight: '500' }}>Repuestos (Express):</span>
+                <span style={{ fontWeight: '600', color: '#f59e0b' }}>S/ {costoTotalRepuestos.toFixed(2)}</span>
+              </div>
+            )}
+
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -1799,7 +2310,7 @@ export default function NuevoServicioPage() {
               }}>
                 <span style={{ fontWeight: '700' }}>TOTAL:</span>
                 <span style={{ fontWeight: '700', color: '#10b981' }}>
-                  S/ {(costoTotalEquipos + serviciosAdicionales.reduce((sum, s) => sum + s.precio, 0)).toFixed(2)}
+                  S/ {(costoTotalEquipos + costoTotalRepuestos + serviciosAdicionales.reduce((sum, s) => sum + s.precio, 0)).toFixed(2)}
                 </span>
               </div>
 
