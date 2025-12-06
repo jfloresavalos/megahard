@@ -209,7 +209,8 @@ export default function NuevoServicioPage() {
       return
     }
 
-    if (problemasSeleccionados.length === 0 && !descripcionProblema) {
+    // ✅ EXPRESS: No validar problemas (se usan diagnóstico y solución en su lugar)
+    if (tipoServicioForm !== 'EXPRESS' && problemasSeleccionados.length === 0 && !descripcionProblema) {
       alert('Por favor seleccione al menos un problema o describa el problema')
       return
     }
@@ -1332,7 +1333,8 @@ export default function NuevoServicioPage() {
         )}
 
         {/* BOTÓN AGREGAR NUEVO EQUIPO - ABRE MODAL */}
-        {modalEquipoAbierto === false && (
+        {/* ✅ EXPRESS: Solo permitir 1 equipo */}
+        {modalEquipoAbierto === false && !(tipoServicioForm === 'EXPRESS' && equipos.length >= 1) && (
           <div style={{
             display: 'flex',
             justifyContent: 'center',
@@ -1532,7 +1534,8 @@ export default function NuevoServicioPage() {
           )}
         </div>
 
-        {/* FOTOS DEL EQUIPO */}
+        {/* FOTOS DEL EQUIPO - Ocultar en EXPRESS */}
+        {tipoServicioForm !== 'EXPRESS' && (
         <div style={{
           backgroundColor: 'white',
           padding: isMobile ? '0.75rem' : '1.5rem',
@@ -1719,6 +1722,7 @@ export default function NuevoServicioPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* MÉTODO DE PAGO Y TOTALES */}
         <div style={{
@@ -2572,7 +2576,8 @@ export default function NuevoServicioPage() {
       </div>
     )}
 
-    {/* PROBLEMAS */}
+    {/* PROBLEMAS - Ocultar en EXPRESS */}
+    {tipoServicioForm !== 'EXPRESS' && (
     <div style={{ marginBottom: '1.25rem', display: 'flex', flexDirection: 'column', maxHeight: '14rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
         <h4 style={{
@@ -2697,14 +2702,17 @@ export default function NuevoServicioPage() {
         />
       </div>
     </div>
+    )}
 
     {/* DETALLES Y COSTO */}
     <div style={{
       display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+      gridTemplateColumns: tipoServicioForm === 'EXPRESS' ? '1fr' : (isMobile ? '1fr' : '1fr 1fr'),
       gap: isMobile ? '1rem' : '1.2rem',
       marginBottom: '1.25rem'
     }}>
+      {/* Detalles - Ocultar en EXPRESS */}
+      {tipoServicioForm !== 'EXPRESS' && (
       <div>
         <h4 style={{
           fontSize: isMobile ? '0.9rem' : '0.95rem',
@@ -2738,6 +2746,7 @@ export default function NuevoServicioPage() {
           onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
         />
       </div>
+      )}
 
       <div>
         <h4 style={{
