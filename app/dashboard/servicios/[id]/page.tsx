@@ -103,6 +103,13 @@ useEffect(() => {
   const [loading, setLoading] = useState(true)
   const [problemasNombres, setProblemasNombres] = useState<{[key: string]: string}>({})
   const [activeTab, setActiveTab] = useState('recepcion')
+
+  // ✅ Cambiar pestaña inicial si es EXPRESS
+  useEffect(() => {
+    if (servicio?.tipoServicioTipo === 'EXPRESS') {
+      setActiveTab('reparacion')
+    }
+  }, [servicio?.tipoServicioTipo])
   
   // Modales
   const [isModalReparadoOpen, setIsModalReparadoOpen] = useState(false)
@@ -607,7 +614,13 @@ useEffect(() => {
           { id: 'recepcion', label: isMobile ? '📝' : '📝 Recepción' },
           { id: 'reparacion', label: isMobile ? '🔧' : '🔧 Reparación' },
           { id: 'entrega', label: isMobile ? '📦' : '📦 Entrega' }
-        ].map(tab => (
+        ].filter(tab => {
+          // ✅ EXPRESS: Ocultar pestaña de recepción
+          if (servicio?.tipoServicioTipo === 'EXPRESS' && tab.id === 'recepcion') {
+            return false
+          }
+          return true
+        }).map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -1268,6 +1281,140 @@ useEffect(() => {
   )}
 </div>
 
+          {/* INFORMACIÓN DEL EQUIPO - Solo para EXPRESS */}
+          {servicio.tipoServicioTipo === 'EXPRESS' && (
+            <div style={{
+              backgroundColor: 'white',
+              padding: isMobile ? '1rem' : '2rem',
+              borderRadius: '8px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              marginBottom: '1.5rem',
+              border: '2px solid #f59e0b'
+            }}>
+              <h2 style={{
+                fontSize: isMobile ? '1.25rem' : '1.5rem',
+                fontWeight: '600',
+                marginBottom: '1.5rem',
+                borderBottom: '2px solid #e5e7eb',
+                paddingBottom: '0.5rem',
+                color: '#f59e0b'
+              }}>
+                📱 INFORMACIÓN DEL EQUIPO
+              </h2>
+
+              <div style={{
+                backgroundColor: '#fffbeb',
+                padding: '1.5rem',
+                borderRadius: '8px',
+                border: '1px solid #fcd34d',
+                marginBottom: '1rem'
+              }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                  gap: '1rem'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.875rem', color: '#92400e', marginBottom: '0.25rem', fontWeight: '500' }}>
+                      Tipo de Equipo:
+                    </div>
+                    <div style={{ fontSize: '1rem', fontWeight: '600', color: '#374151' }}>
+                      {servicio.tipoEquipo || 'N/A'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '0.875rem', color: '#92400e', marginBottom: '0.25rem', fontWeight: '500' }}>
+                      Marca/Modelo:
+                    </div>
+                    <div style={{ fontSize: '1rem', fontWeight: '600', color: '#374151' }}>
+                      {servicio.marcaModelo || 'N/A'}
+                    </div>
+                  </div>
+
+                  {servicio.descripcionEquipo && (
+                    <div style={{ gridColumn: isMobile ? '1' : '1 / -1' }}>
+                      <div style={{ fontSize: '0.875rem', color: '#92400e', marginBottom: '0.25rem', fontWeight: '500' }}>
+                        Descripción:
+                      </div>
+                      <div style={{ fontSize: '0.95rem', color: '#374151' }}>
+                        {servicio.descripcionEquipo}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <div style={{ fontSize: '0.875rem', color: '#92400e', marginBottom: '0.25rem', fontWeight: '500' }}>
+                      Costo del Servicio:
+                    </div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#059669' }}>
+                      S/ {Number(servicio.costoServicio || 0).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SERVICIOS ADICIONALES */}
+              {(() => {
+                try {
+                  let serviciosAdicionales: any = servicio.serviciosAdicionales;
+                  if (typeof serviciosAdicionales === 'string') {
+                    serviciosAdicionales = JSON.parse(serviciosAdicionales);
+                  }
+                  const servicios = serviciosAdicionales?.servicios as any[] || [];
+
+                  if (servicios.length > 0) {
+                    return (
+                      <div>
+                        <h3 style={{
+                          fontSize: '1.1rem',
+                          fontWeight: '600',
+                          marginBottom: '1rem',
+                          color: '#374151'
+                        }}>
+                          🔧 Servicios Adicionales ({servicios.length})
+                        </h3>
+                        <div style={{ display: 'grid', gap: '0.75rem' }}>
+                          {servicios.map((servicio: any, index: number) => (
+                            <div
+                              key={index}
+                              style={{
+                                backgroundColor: 'white',
+                                padding: '1rem',
+                                borderRadius: '6px',
+                                border: '1px solid #e5e7eb',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <div>
+                                <div style={{ fontWeight: '600', fontSize: '0.95rem', color: '#374151' }}>
+                                  {servicio.nombre}
+                                </div>
+                                {servicio.descripcion && (
+                                  <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                                    {servicio.descripcion}
+                                  </div>
+                                )}
+                              </div>
+                              <div style={{ fontWeight: '700', fontSize: '1rem', color: '#059669' }}>
+                                S/ {Number(servicio.precio || 0).toFixed(2)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                } catch {
+                  return null;
+                }
+              })()}
+            </div>
+          )}
+
           {/* DIAGNÓSTICO Y SOLUCIÓN */}
           {(servicio.diagnostico || servicio.solucion) && (
             <div style={{
@@ -1573,7 +1720,9 @@ useEffect(() => {
               borderBottom: '2px solid #e5e7eb',
               paddingBottom: '0.5rem'
             }}>
-              💰 COSTOS ACUMULADOS (RECEPCIÓN + REPARACIÓN)
+              {servicio.tipoServicioTipo === 'EXPRESS'
+                ? '💰 COSTOS TOTALES'
+                : '💰 COSTOS ACUMULADOS (RECEPCIÓN + REPARACIÓN)'}
             </h2>
             <div style={{
               backgroundColor: '#f9fafb',
@@ -1590,7 +1739,9 @@ useEffect(() => {
                 color: '#92400e',
                 fontWeight: '500'
               }}>
-                ℹ️ Incluye los costos iniciales + repuestos agregados en reparación
+                {servicio.tipoServicioTipo === 'EXPRESS'
+                  ? 'ℹ️ Costos del servicio express: Equipo + Servicios Adicionales + Repuestos'
+                  : 'ℹ️ Incluye los costos iniciales + repuestos agregados en reparación'}
               </div>
 
               {/* Costo de Equipos */}
@@ -1600,7 +1751,9 @@ useEffect(() => {
                 marginBottom: '0.75rem',
                 fontSize: '1rem'
               }}>
-                <span style={{ fontWeight: '500' }}>Costo de Equipos:</span>
+                <span style={{ fontWeight: '500' }}>
+                  {servicio.tipoServicioTipo === 'EXPRESS' ? 'Costo del Equipo:' : 'Costo de Equipos:'}
+                </span>
                 <span style={{ fontWeight: '600' }}>S/ {Number(servicio.costoServicio || 0).toFixed(2)}</span>
               </div>
 
