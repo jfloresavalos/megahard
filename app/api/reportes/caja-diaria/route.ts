@@ -12,7 +12,16 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams
     const fechaParam = searchParams.get('fecha')
-    const fecha = fechaParam ? new Date(fechaParam) : new Date()
+
+    // Crear fecha en zona horaria local, no UTC
+    let fecha: Date
+    if (fechaParam) {
+      const [year, month, day] = fechaParam.split('-').map(Number)
+      fecha = new Date(year, month - 1, day)
+    } else {
+      fecha = new Date()
+    }
+
     let sedeId: string | null | undefined = searchParams.get('sedeId')
 
     // 🔐 CONTROL DE ACCESO POR ROL

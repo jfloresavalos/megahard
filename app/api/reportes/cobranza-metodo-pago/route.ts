@@ -15,9 +15,12 @@ export async function GET(request: NextRequest) {
     const fechaFin = searchParams.get('fechaFin') || new Date().toISOString().split('T')[0]
     const sedeParamId = searchParams.get('sede')
 
-    const inicio = new Date(fechaInicio)
-    const fin = new Date(fechaFin)
-    fin.setHours(23, 59, 59, 999)
+    // Crear fechas en zona horaria local, no UTC
+    const [yearInicio, monthInicio, dayInicio] = fechaInicio.split('-').map(Number)
+    const inicio = new Date(yearInicio, monthInicio - 1, dayInicio, 0, 0, 0, 0)
+
+    const [yearFin, monthFin, dayFin] = fechaFin.split('-').map(Number)
+    const fin = new Date(yearFin, monthFin - 1, dayFin, 23, 59, 59, 999)
 
     const esAdmin = session.user.rol === 'admin' || session.user.rol === 'supervisor'
     const userSedeId = session.user.sedeId
@@ -52,10 +55,13 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Obtener servicios técnicos
+    // Obtener servicios técnicos (con pagos en el rango)
     const servicios = await prisma.servicioTecnico.findMany({
       where: {
-        fechaRecepcion: { gte: inicio, lte: fin },
+        OR: [
+          { fechaRecepcion: { gte: inicio, lte: fin } }, // Adelanto en el rango
+          { fechaEntregaReal: { gte: inicio, lte: fin } } // Saldo en el rango
+        ],
         ...(esAdmin && sedeParamId && sedeParamId !== 'TODAS' ? { sedeId: sedeParamId } : {}),
         ...(!esAdmin && userSedeId ? { sedeId: userSedeId } : {})
       }
@@ -81,15 +87,31 @@ export async function GET(request: NextRequest) {
       })
     })
 
-    // Procesar servicios (aCuenta es lo cobrado)
+    // Procesar servicios (solo el último pago - al entregar)
     servicios.forEach(servicio => {
-      const aCuenta = Number(servicio.aCuenta || 0)
-      if (aCuenta > 0) {
-        // Asumir que servicios se cobran en efectivo (o podrías agregar campo metodoPago en servicios)
+      const total = Number(servicio.total || 0)
+      const fechaEntrega = servicio.fechaEntregaReal ? new Date(servicio.fechaEntregaReal) : null
+
+      // Si fue entregado en el rango, contar el total con el método de la entrega
+      if (fechaEntrega && fechaEntrega >= inicio && fechaEntrega <= fin && total > 0) {
+        const metodoFinal = servicio.metodoPagoSaldo || servicio.metodoPago || 'EFECTIVO'
         metodosPagoMap.set(
-          'EFECTIVO',
-          (metodosPagoMap.get('EFECTIVO') || 0) + aCuenta
+          metodoFinal,
+          (metodosPagoMap.get(metodoFinal) || 0) + total
         )
+      }
+      // Si NO fue entregado pero recibió adelanto en el rango, contar solo el adelanto
+      else {
+        const aCuenta = Number(servicio.aCuenta || 0)
+        const fechaRecepcion = new Date(servicio.fechaRecepcion)
+
+        if (aCuenta > 0 && fechaRecepcion >= inicio && fechaRecepcion <= fin) {
+          const metodo = servicio.metodoPago || 'EFECTIVO'
+          metodosPagoMap.set(
+            metodo,
+            (metodosPagoMap.get(metodo) || 0) + aCuenta
+          )
+        }
       }
     })
 

@@ -54,7 +54,7 @@ export async function getCajaDiaria(params: CajaDiariaParams) {
     },
   })
 
-  // 3. Obtener adelantos de servicios del día
+  // 3. Obtener adelantos de servicios del día (que NO fueron entregados el mismo día)
   const serviciosAdelanto = await prisma.servicioTecnico.findMany({
     where: {
       fechaRecepcion: {
@@ -63,6 +63,8 @@ export async function getCajaDiaria(params: CajaDiariaParams) {
       },
       sedeId: sedeId || undefined,
       aCuenta: { gt: 0 },
+      // Excluir servicios que ya fueron entregados
+      estado: { not: 'ENTREGADO' }
     },
     include: {
       sede: { select: { nombre: true } },
@@ -74,7 +76,7 @@ export async function getCajaDiaria(params: CajaDiariaParams) {
   // 4. Calcular totales
   const totalVentas = ventas.reduce((sum, v) => sum + Number(v.total), 0)
   const totalServiciosEntregados = serviciosEntregados.reduce(
-    (sum, s) => sum + Number(s.saldo || 0),
+    (sum, s) => sum + Number(s.total || 0),
     0
   )
   const totalAdelantos = serviciosAdelanto.reduce(
@@ -83,13 +85,29 @@ export async function getCajaDiaria(params: CajaDiariaParams) {
   )
   const totalGeneral = totalVentas + totalServiciosEntregados + totalAdelantos
 
-  // 5. Agrupar por método de pago (solo ventas)
+  // 5. Agrupar por método de pago (ventas + servicios)
   const porMetodoPago: Record<string, number> = {}
+
+  // 5.1 Pagos de ventas
   ventas.forEach((venta) => {
     venta.pagos.forEach((pago) => {
       const metodo = pago.metodoPago.nombre
       porMetodoPago[metodo] = (porMetodoPago[metodo] || 0) + Number(pago.monto)
     })
+  })
+
+  // 5.2 Pagos de servicios entregados (usar método final)
+  serviciosEntregados.forEach((servicio) => {
+    const total = Number(servicio.total || 0)
+    const metodo = servicio.metodoPagoSaldo || servicio.metodoPago || 'EFECTIVO'
+    porMetodoPago[metodo] = (porMetodoPago[metodo] || 0) + total
+  })
+
+  // 5.3 Adelantos de servicios
+  serviciosAdelanto.forEach((servicio) => {
+    const adelanto = Number(servicio.aCuenta || 0)
+    const metodo = servicio.metodoPago || 'EFECTIVO'
+    porMetodoPago[metodo] = (porMetodoPago[metodo] || 0) + adelanto
   })
 
   // 6. Si es consolidado (todas las sedes), agrupar por sede
@@ -122,8 +140,8 @@ export async function getCajaDiaria(params: CajaDiariaParams) {
           total: 0,
         }
       }
-      porSede[sede].totalServicios += Number(s.saldo || 0)
-      porSede[sede].total += Number(s.saldo || 0)
+      porSede[sede].totalServicios += Number(s.total || 0)
+      porSede[sede].total += Number(s.total || 0)
     })
 
     serviciosAdelanto.forEach((s) => {
