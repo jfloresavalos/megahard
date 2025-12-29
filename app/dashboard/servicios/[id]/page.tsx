@@ -559,7 +559,10 @@ useEffect(() => {
           {servicio.estado === 'REPARADO' && (
             <>
               <button
-                onClick={() => setIsModalEditarReparacionOpen(true)}
+                onClick={() => servicio.tipoServicioTipo === 'EXPRESS'
+                  ? router.push(`/dashboard/servicios/${servicio.id}/editar`)
+                  : setIsModalEditarReparacionOpen(true)
+                }
                 style={{
                       padding: isMobile ? '0.5rem 1rem' : '0.75rem 1.5rem',
                       backgroundColor: '#f59e0b',
@@ -573,7 +576,7 @@ useEffect(() => {
                       width: isMobile ? '100%' : 'auto'
                 }}
               >
-                ✏️ Editar Reparación
+                {servicio.tipoServicioTipo === 'EXPRESS' ? '✏️ Editar Servicio' : '✏️ Editar Reparación'}
               </button>
               <button
                 onClick={() => setIsModalEntregadoOpen(true)}
@@ -1264,7 +1267,10 @@ useEffect(() => {
   {/* Solo editable si está REPARADO */}
   {servicio.estado === 'REPARADO' && (
     <button
-      onClick={() => setIsModalEditarReparacionOpen(true)}
+      onClick={() => servicio.tipoServicioTipo === 'EXPRESS'
+        ? router.push(`/dashboard/servicios/${servicio.id}/editar`)
+        : setIsModalEditarReparacionOpen(true)
+      }
       style={{
         padding: '0.75rem 1.5rem',
         backgroundColor: '#f59e0b',
@@ -1276,7 +1282,7 @@ useEffect(() => {
         fontWeight: '600'
       }}
     >
-      ✏️ Editar Reparación
+      {servicio.tipoServicioTipo === 'EXPRESS' ? '✏️ Editar Servicio' : '✏️ Editar Reparación'}
     </button>
   )}
 </div>
@@ -1342,15 +1348,6 @@ useEffect(() => {
                       </div>
                     </div>
                   )}
-
-                  <div>
-                    <div style={{ fontSize: '0.875rem', color: '#92400e', marginBottom: '0.25rem', fontWeight: '500' }}>
-                      Costo del Servicio:
-                    </div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#059669' }}>
-                      S/ {Number(servicio.costoServicio || 0).toFixed(2)}
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -1740,22 +1737,22 @@ useEffect(() => {
                 fontWeight: '500'
               }}>
                 {servicio.tipoServicioTipo === 'EXPRESS'
-                  ? 'ℹ️ Costos del servicio express: Equipo + Servicios Adicionales + Repuestos'
+                  ? 'ℹ️ Costos del servicio express: Servicios Adicionales + Repuestos'
                   : 'ℹ️ Incluye los costos iniciales + repuestos agregados en reparación'}
               </div>
 
-              {/* Costo de Equipos */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginBottom: '0.75rem',
-                fontSize: '1rem'
-              }}>
-                <span style={{ fontWeight: '500' }}>
-                  {servicio.tipoServicioTipo === 'EXPRESS' ? 'Costo del Equipo:' : 'Costo de Equipos:'}
-                </span>
-                <span style={{ fontWeight: '600' }}>S/ {Number(servicio.costoServicio || 0).toFixed(2)}</span>
-              </div>
+              {/* Costo de Equipos - Ocultar para EXPRESS */}
+              {servicio.tipoServicioTipo !== 'EXPRESS' && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '0.75rem',
+                  fontSize: '1rem'
+                }}>
+                  <span style={{ fontWeight: '500' }}>Costo de Equipos:</span>
+                  <span style={{ fontWeight: '600' }}>S/ {Number(servicio.costoServicio || 0).toFixed(2)}</span>
+                </div>
+              )}
 
               {/* Servicios Adicionales */}
               {(() => {
@@ -1786,16 +1783,18 @@ useEffect(() => {
                 }
               })()}
 
-              {/* Costo de Repuestos */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginBottom: '0.75rem',
-                fontSize: '1rem'
-              }}>
-                <span style={{ fontWeight: '500' }}>Costo de Repuestos:</span>
-                <span style={{ fontWeight: '600' }}>S/ {Number(servicio.costoRepuestos || 0).toFixed(2)}</span>
-              </div>
+              {/* Costo de Repuestos - Solo mostrar si hay repuestos */}
+              {Number(servicio.costoRepuestos || 0) > 0 && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '0.75rem',
+                  fontSize: '1rem'
+                }}>
+                  <span style={{ fontWeight: '500' }}>Costo de Repuestos:</span>
+                  <span style={{ fontWeight: '600' }}>S/ {Number(servicio.costoRepuestos || 0).toFixed(2)}</span>
+                </div>
+              )}
 
               {/* Separador */}
               <div style={{
@@ -1813,19 +1812,7 @@ useEffect(() => {
               }}>
                 <span style={{ fontWeight: '600' }}>TOTAL ACUMULADO:</span>
                 <span style={{ fontWeight: '700', color: '#059669' }}>
-                  S/ {(() => {
-                    try {
-                      let serviciosAdicionales: any = servicio.serviciosAdicionales;
-                      if (typeof serviciosAdicionales === 'string') {
-                        serviciosAdicionales = JSON.parse(serviciosAdicionales);
-                      }
-                      const servicios = serviciosAdicionales?.servicios as any[] || [];
-                      const costoAdicionales = servicios.reduce((sum: number, s: any) => sum + (s.precio || 0), 0);
-                      return (Number(servicio.costoServicio || 0) + costoAdicionales + Number(servicio.costoRepuestos || 0)).toFixed(2);
-                    } catch {
-                      return (Number(servicio.costoServicio || 0) + Number(servicio.costoRepuestos || 0)).toFixed(2);
-                    }
-                  })()}
+                  S/ {Number(servicio.total || 0).toFixed(2)}
                 </span>
               </div>
 

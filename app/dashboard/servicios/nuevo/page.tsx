@@ -168,8 +168,6 @@ export default function NuevoServicioPage() {
 
   // ✅ SERVICIO EXPRESS
   const [esServicioExpress, setEsServicioExpress] = useState(false)
-  const [diagnosticoExpress, setDiagnosticoExpress] = useState('')
-  const [solucionExpress, setSolucionExpress] = useState('')
 
   // Fotos
   const [fotos, setFotos] = useState<File[]>([])
@@ -215,7 +213,7 @@ export default function NuevoServicioPage() {
       return
     }
 
-    if (parseFloat(costoServicio) <= 0) {
+    if (tipoServicioForm !== 'EXPRESS' && parseFloat(costoServicio) <= 0) {
       alert('El costo del servicio debe ser mayor a 0')
       return
     }
@@ -234,7 +232,7 @@ export default function NuevoServicioPage() {
       faltaPernos,
       tieneAranaduras,
       otrosDetalles,
-      costoServicio: parseFloat(costoServicio),
+      costoServicio: tipoServicioForm === 'EXPRESS' ? 0 : parseFloat(costoServicio),
       fotos: [] // Las fotos son a nivel de servicio, no por equipo
     }
 
@@ -792,17 +790,6 @@ export default function NuevoServicioPage() {
       return
     }
 
-    // ✅ Validación para servicio express
-    if (tipoServicioForm === 'EXPRESS') {
-      if (!diagnosticoExpress.trim()) {
-        alert('El diagnóstico es obligatorio para servicios express')
-        return
-      }
-      if (!solucionExpress.trim()) {
-        alert('La solución es obligatoria para servicios express')
-        return
-      }
-    }
 
     setLoading(true)
 
@@ -855,20 +842,13 @@ export default function NuevoServicioPage() {
           tipoServicioForm,
           direccionServicio: tipoServicioForm === 'DOMICILIO' ? direccionServicio : null,
           serviciosAdicionales,
+          repuestos: tipoServicioForm === 'EXPRESS' ? repuestosSeleccionados : [],
           metodoPago: dejaAdelanto ? metodoPago : null,
           fechaEstimada: fechaEstimada ? new Date(fechaEstimada + 'T00:00:00-05:00').toISOString() : null,
           garantiaDias: parseInt(garantiaDias),
           aCuenta: dejaAdelanto ? (parseFloat(aCuenta) || 0) : 0,
           // ✅ SERVICIO EXPRESS
-          esServicioExpress: tipoServicioForm === 'EXPRESS',
-          diagnosticoExpress: tipoServicioForm === 'EXPRESS' ? diagnosticoExpress : null,
-          solucionExpress: tipoServicioForm === 'EXPRESS' ? solucionExpress : null,
-          // ✅ REPUESTOS - Solo enviar si es servicio express
-          repuestos: tipoServicioForm === 'EXPRESS' ? repuestosSeleccionados.map(r => ({
-            productoId: r.productoId,
-            cantidad: r.cantidad,
-            precioUnit: r.precioUnit
-          })) : []
+          esServicioExpress: tipoServicioForm === 'EXPRESS'
         })
       })
 
@@ -1214,7 +1194,9 @@ export default function NuevoServicioPage() {
                       {equipo.marcaModelo}
                     </p>
                   </div>
-                  
+
+                  {/* Problemas - Solo mostrar si NO es EXPRESS */}
+                  {tipoServicioForm !== 'EXPRESS' && (
                   <div style={{ marginBottom: '0.5rem' }}>
                     <p style={{ margin: '0.25rem 0', fontSize: '0.85rem' }}>
                       <strong>Problema:</strong> {equipo.otrosProblemas}
@@ -1238,7 +1220,10 @@ export default function NuevoServicioPage() {
                       </div>
                     )}
                   </div>
-                  
+                  )}
+
+                  {/* Costo - Solo mostrar si NO es EXPRESS */}
+                  {tipoServicioForm !== 'EXPRESS' && (
                   <div style={{
                     backgroundColor: '#fef3c7',
                     padding: '0.5rem',
@@ -1251,7 +1236,8 @@ export default function NuevoServicioPage() {
                   }}>
                     S/ {equipo.costoServicio.toFixed(2)}
                   </div>
-                  
+                  )}
+
                   <div style={{ display: 'flex', gap: '0.3rem' }}>
                     <button
                       type="button"
@@ -1318,17 +1304,20 @@ export default function NuevoServicioPage() {
               ))}
             </div>
 
-            <div style={{
-              marginTop: '1rem',
-              paddingTop: '1rem',
-              borderTop: '2px solid #d1d5db',
-              textAlign: 'right',
-              fontSize: '1rem',
-              fontWeight: '700',
-              color: '#065f46'
-            }}>
-              COSTO TOTAL: S/ {costoTotalEquipos.toFixed(2)}
-            </div>
+            {/* Ocultar costo total cuando es EXPRESS */}
+            {tipoServicioForm !== 'EXPRESS' && (
+              <div style={{
+                marginTop: '1rem',
+                paddingTop: '1rem',
+                borderTop: '2px solid #d1d5db',
+                textAlign: 'right',
+                fontSize: '1rem',
+                fontWeight: '700',
+                color: '#065f46'
+              }}>
+                COSTO TOTAL: S/ {costoTotalEquipos.toFixed(2)}
+              </div>
+            )}
           </div>
         )}
 
@@ -1360,6 +1349,260 @@ export default function NuevoServicioPage() {
             >
               ➕ Agregar Nuevo Equipo
             </button>
+          </div>
+        )}
+
+        {/* REPUESTOS - Solo para EXPRESS */}
+        {tipoServicioForm === 'EXPRESS' && (
+          <div style={{
+            backgroundColor: 'white',
+            padding: isMobile ? '0.75rem' : '1.5rem',
+            borderRadius: '8px',
+            marginBottom: isMobile ? '1rem' : '1.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}>
+            <h2 style={{
+              fontSize: isMobile ? '0.95rem' : '1.25rem',
+              fontWeight: '600',
+              marginBottom: isMobile ? '0.75rem' : '1.5rem',
+              borderBottom: '2px solid #e5e7eb',
+              paddingBottom: isMobile ? '0.35rem' : '0.5rem'
+            }}>
+              🔧 REPUESTOS (Opcional)
+            </h2>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: isMobile ? '0.75rem' : '1rem',
+              flexWrap: 'wrap',
+              gap: isMobile ? '0.5rem' : '1rem'
+            }}>
+              <span></span>
+              <button
+                type="button"
+                onClick={() => setMostrarSelectorRepuestos(!mostrarSelectorRepuestos)}
+                style={{
+                  padding: isMobile ? '0.4rem 0.75rem' : '0.5rem 1rem',
+                  backgroundColor: mostrarSelectorRepuestos ? '#ef4444' : '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: isMobile ? '0.8rem' : '0.875rem',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {mostrarSelectorRepuestos ? '✕ Cerrar' : '+ Agregar Repuesto'}
+              </button>
+            </div>
+
+            {/* SELECTOR DE REPUESTOS */}
+            {mostrarSelectorRepuestos && (
+              <div style={{
+                backgroundColor: '#f9fafb',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                padding: isMobile ? '0.75rem' : '1rem',
+                marginBottom: '1rem'
+              }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Buscar repuesto por nombre o código..."
+                  value={busquedaRepuesto}
+                  onChange={(e) => setBusquedaRepuesto(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: isMobile ? '0.5rem' : '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: isMobile ? '0.85rem' : '0.95rem',
+                    marginBottom: '0.75rem'
+                  }}
+                />
+
+                <div style={{
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  backgroundColor: 'white'
+                }}>
+                  {productos
+                    .filter(p =>
+                      p.nombre.toLowerCase().includes(busquedaRepuesto.toLowerCase()) ||
+                      p.codigo.toLowerCase().includes(busquedaRepuesto.toLowerCase())
+                    )
+                    .map((producto) => (
+                      <div
+                        key={producto.id}
+                        onClick={() => agregarRepuesto(producto)}
+                        style={{
+                          padding: isMobile ? '0.5rem' : '0.75rem',
+                          borderBottom: '1px solid #e5e7eb',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.15s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                      >
+                        <div style={{ fontWeight: '600', fontSize: isMobile ? '0.85rem' : '0.95rem' }}>
+                          {producto.nombre}
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: isMobile ? '0.75rem' : '0.85rem',
+                          color: '#6b7280',
+                          marginTop: '0.25rem'
+                        }}>
+                          <span>Código: {producto.codigo}</span>
+                          <span style={{ color: '#10b981', fontWeight: '700' }}>
+                            S/ {producto.precioVenta.toFixed(2)}
+                          </span>
+                        </div>
+                        {producto.stock !== undefined && (
+                          <div style={{ fontSize: isMobile ? '0.7rem' : '0.8rem', color: '#6b7280' }}>
+                            Stock: {producto.stock}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  {productos.filter(p =>
+                    p.nombre.toLowerCase().includes(busquedaRepuesto.toLowerCase()) ||
+                    p.codigo.toLowerCase().includes(busquedaRepuesto.toLowerCase())
+                  ).length === 0 && (
+                    <div style={{
+                      padding: '1rem',
+                      textAlign: 'center',
+                      color: '#6b7280',
+                      fontSize: isMobile ? '0.85rem' : '0.95rem'
+                    }}>
+                      No se encontraron productos
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* LISTA DE REPUESTOS SELECCIONADOS */}
+            {repuestosSeleccionados.length > 0 && (
+              <div style={{
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                overflow: 'hidden'
+              }}>
+                {repuestosSeleccionados.map((repuesto, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      padding: isMobile ? '0.75rem' : '1rem',
+                      borderBottom: index < repuestosSeleccionados.length - 1 ? '1px solid #e5e7eb' : 'none',
+                      backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb'
+                    }}
+                  >
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr auto',
+                      gap: isMobile ? '0.5rem' : '1rem',
+                      alignItems: 'center'
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: '600', fontSize: isMobile ? '0.85rem' : '0.95rem' }}>
+                          {repuesto.producto.nombre}
+                        </div>
+                        <div style={{ fontSize: isMobile ? '0.75rem' : '0.85rem', color: '#6b7280' }}>
+                          Código: {repuesto.producto.codigo}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: isMobile ? '0.75rem' : '0.85rem',
+                          color: '#6b7280',
+                          marginBottom: '0.25rem'
+                        }}>
+                          Cantidad
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={repuesto.cantidad}
+                          onChange={(e) => actualizarCantidadRepuesto(index, parseInt(e.target.value) || 1)}
+                          style={{
+                            width: '100%',
+                            padding: isMobile ? '0.35rem' : '0.5rem',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: isMobile ? '0.85rem' : '0.95rem'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: isMobile ? '0.75rem' : '0.85rem',
+                          color: '#6b7280',
+                          marginBottom: '0.25rem'
+                        }}>
+                          Precio Unit.
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={repuesto.precioUnit}
+                          onChange={(e) => actualizarPrecioRepuesto(index, parseFloat(e.target.value) || 0)}
+                          style={{
+                            width: '100%',
+                            padding: isMobile ? '0.35rem' : '0.5rem',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: isMobile ? '0.85rem' : '0.95rem'
+                          }}
+                        />
+                      </div>
+
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: isMobile ? 'flex-start' : 'flex-end',
+                        gap: '0.5rem'
+                      }}>
+                        <div style={{
+                          fontSize: isMobile ? '0.9rem' : '1rem',
+                          fontWeight: '700',
+                          color: '#10b981'
+                        }}>
+                          S/ {Number(repuesto.subtotal || 0).toFixed(2)}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => eliminarRepuesto(index)}
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            backgroundColor: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: isMobile ? '0.75rem' : '0.85rem',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                        >
+                          ✕ Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -1886,366 +2129,6 @@ export default function NuevoServicioPage() {
             </div>
           </div>
 
-          {/* ✅ SERVICIO EXPRESS - Solo mostrar si tipoServicioForm === 'EXPRESS' */}
-          {tipoServicioForm === 'EXPRESS' && (
-            <div style={{
-              backgroundColor: 'white',
-              padding: isMobile ? '0.75rem' : '1.5rem',
-              borderRadius: '8px',
-              marginBottom: isMobile ? '1rem' : '1.5rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              border: '2px solid #f59e0b'
-            }}>
-              <div style={{
-                fontSize: isMobile ? '0.95rem' : '1.1rem',
-                fontWeight: '600',
-                color: '#f59e0b',
-                marginBottom: '1rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
-                <span style={{ fontSize: '1.5rem' }}>⚡</span>
-                <span>Servicio Express</span>
-                <span style={{
-                  fontSize: '0.75rem',
-                  backgroundColor: '#fef3c7',
-                  color: '#92400e',
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '4px'
-                }}>Completado inmediatamente</span>
-              </div>
-
-              <div style={{
-                backgroundColor: '#fffbeb',
-                border: '1px solid #fcd34d',
-                borderRadius: '6px',
-                padding: isMobile ? '0.75rem' : '1rem'
-              }}>
-                <p style={{ fontSize: '0.875rem', color: '#92400e', marginBottom: '1rem' }}>
-                  ℹ️ <strong>Servicio Express:</strong> El servicio se registrará como REPARADO
-                  y estará listo para entrega. Debe proporcionar el diagnóstico y solución ahora.
-                </p>
-
-                <div style={{ display: 'grid', gap: '1rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
-                      Diagnóstico <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <textarea
-                      value={diagnosticoExpress}
-                      onChange={(e) => setDiagnosticoExpress(e.target.value)}
-                      placeholder="Describa el diagnóstico del equipo..."
-                      rows={3}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '0.875rem',
-                        resize: 'vertical'
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
-                      Solución Aplicada <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <textarea
-                      value={solucionExpress}
-                      onChange={(e) => setSolucionExpress(e.target.value)}
-                      placeholder="Describa la solución aplicada..."
-                      rows={3}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '0.875rem',
-                        resize: 'vertical'
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
-                      Fecha de Reparación
-                    </label>
-                    <input
-                      type="text"
-                      value={new Date().toLocaleDateString('es-PE', {
-                        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                      })}
-                      disabled
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '0.875rem',
-                        backgroundColor: '#f9fafb',
-                        color: '#6b7280'
-                      }}
-                    />
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                      Se registrará automáticamente la fecha y hora actual
-                    </p>
-                  </div>
-
-                  {/* ✅ REPUESTOS PARA EXPRESS */}
-                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #fcd34d' }}>
-                    <div style={{
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      marginBottom: '0.75rem',
-                      color: '#92400e'
-                    }}>
-                      🔧 Repuestos Utilizados (Opcional)
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setMostrarSelectorRepuestos(!mostrarSelectorRepuestos)}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        backgroundColor: '#f59e0b',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        marginBottom: '0.75rem',
-                        transition: 'all 0.15s'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#d97706'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f59e0b'}
-                    >
-                      {mostrarSelectorRepuestos ? '- Cerrar' : '+ Agregar Repuesto'}
-                    </button>
-
-                    {/* SELECTOR DE PRODUCTOS */}
-                    {mostrarSelectorRepuestos && (
-                      <div style={{
-                        border: '1px solid #fcd34d',
-                        borderRadius: '6px',
-                        padding: '0.75rem',
-                        marginBottom: '0.75rem',
-                        backgroundColor: 'white'
-                      }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: '600', marginBottom: '0.5rem', color: '#92400e' }}>
-                          Seleccionar producto:
-                        </div>
-
-                        {/* Buscador */}
-                        <input
-                          type="text"
-                          placeholder="🔍 Buscar por código o nombre..."
-                          value={busquedaRepuesto}
-                          onChange={(e) => setBusquedaRepuesto(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            border: '1px solid #fcd34d',
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            marginBottom: '0.5rem'
-                          }}
-                        />
-
-                        <div style={{
-                          maxHeight: '200px',
-                          overflowY: 'auto',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '0.5rem'
-                        }}>
-                          {!busquedaRepuesto.trim() ? (
-                            <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.75rem' }}>
-                              Escribe para buscar productos...
-                            </div>
-                          ) : (
-                            <>
-                              {productos
-                                .filter(producto => {
-                                  const busqueda = busquedaRepuesto.toLowerCase()
-                                  return (
-                                    producto.codigo.toLowerCase().includes(busqueda) ||
-                                    producto.nombre.toLowerCase().includes(busqueda)
-                                  )
-                                })
-                                .map((producto) => (
-                                  <button
-                                    key={producto.id}
-                                    type="button"
-                                    onClick={() => agregarRepuesto(producto)}
-                                    style={{
-                                      padding: '0.5rem',
-                                      backgroundColor: '#fffbeb',
-                                      border: '1px solid #fcd34d',
-                                      borderRadius: '4px',
-                                      cursor: 'pointer',
-                                      textAlign: 'left',
-                                      transition: 'all 0.15s'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#fef3c7'
-                                      e.currentTarget.style.borderColor = '#f59e0b'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.backgroundColor = '#fffbeb'
-                                      e.currentTarget.style.borderColor = '#fcd34d'
-                                    }}
-                                  >
-                                    <div style={{ fontWeight: '600', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
-                                      {producto.codigo} - {producto.nombre}
-                                    </div>
-                                    <div style={{ fontSize: '0.7rem', color: '#92400e' }}>
-                                      Stock: {producto.stock || 0} | Precio: S/ {producto.precioVenta.toFixed(2)}
-                                    </div>
-                                  </button>
-                                ))}
-                              {productos.filter(producto => {
-                                const busqueda = busquedaRepuesto.toLowerCase()
-                                return (
-                                  producto.codigo.toLowerCase().includes(busqueda) ||
-                                  producto.nombre.toLowerCase().includes(busqueda)
-                                )
-                              }).length === 0 && (
-                                <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.75rem' }}>
-                                  No se encontraron productos
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* LISTA DE REPUESTOS SELECCIONADOS */}
-                    {repuestosSeleccionados.length > 0 && (
-                      <div>
-                        <div style={{ fontSize: '0.75rem', fontWeight: '600', marginBottom: '0.5rem', color: '#92400e' }}>
-                          Repuestos agregados:
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          {repuestosSeleccionados.map((repuesto, index) => (
-                            <div
-                              key={index}
-                              style={{
-                                border: '1px solid #fcd34d',
-                                borderRadius: '6px',
-                                padding: '0.75rem',
-                                backgroundColor: 'white'
-                              }}
-                            >
-                              <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'flex-start',
-                                marginBottom: '0.5rem'
-                              }}>
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ fontWeight: '600', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
-                                    {repuesto.producto.codigo} - {repuesto.producto.nombre}
-                                  </div>
-                                  {repuesto.producto.descripcion && (
-                                    <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>
-                                      {repuesto.producto.descripcion}
-                                    </div>
-                                  )}
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => eliminarRepuesto(index)}
-                                  title="Eliminar repuesto"
-                                  style={{
-                                    padding: '0.25rem 0.4rem',
-                                    backgroundColor: '#ef4444',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    fontSize: '0.7rem',
-                                    minWidth: '20px',
-                                    height: '20px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                  }}
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                              <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: '1fr 1fr 1fr',
-                                gap: '0.5rem'
-                              }}>
-                                <div>
-                                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: '600', marginBottom: '0.25rem', color: '#92400e' }}>
-                                    Cantidad
-                                  </label>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    value={repuesto.cantidad}
-                                    onChange={(e) => actualizarCantidadRepuesto(index, parseInt(e.target.value) || 1)}
-                                    style={{
-                                      width: '100%',
-                                      padding: '0.4rem',
-                                      border: '1px solid #fcd34d',
-                                      borderRadius: '4px',
-                                      fontSize: '0.75rem'
-                                    }}
-                                  />
-                                </div>
-                                <div>
-                                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: '600', marginBottom: '0.25rem', color: '#92400e' }}>
-                                    Precio Unit.
-                                  </label>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={repuesto.precioUnit}
-                                    onChange={(e) => actualizarPrecioRepuesto(index, parseFloat(e.target.value) || 0)}
-                                    style={{
-                                      width: '100%',
-                                      padding: '0.4rem',
-                                      border: '1px solid #fcd34d',
-                                      borderRadius: '4px',
-                                      fontSize: '0.75rem'
-                                    }}
-                                  />
-                                </div>
-                                <div>
-                                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: '600', marginBottom: '0.25rem', color: '#92400e' }}>
-                                    Subtotal
-                                  </label>
-                                  <div style={{
-                                    padding: '0.4rem',
-                                    backgroundColor: '#fef3c7',
-                                    borderRadius: '4px',
-                                    fontSize: '0.75rem',
-                                    fontWeight: '600',
-                                    color: '#92400e'
-                                  }}>
-                                    S/ {repuesto.subtotal.toFixed(2)}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* RESUMEN DE TOTALES */}
           <div style={{
@@ -2266,15 +2149,18 @@ export default function NuevoServicioPage() {
               <span style={{ fontWeight: '600', color: '#065f46' }}>{equipos.length}</span>
             </div>
 
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginBottom: '0.75rem',
-              fontSize: 'clamp(0.875rem, 2vw, 1rem)'
-            }}>
-              <span style={{ fontWeight: '500' }}>Costo Equipos:</span>
-              <span style={{ fontWeight: '600' }}>S/ {costoTotalEquipos.toFixed(2)}</span>
-            </div>
+            {/* Ocultar Costo Equipos cuando es EXPRESS */}
+            {tipoServicioForm !== 'EXPRESS' && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '0.75rem',
+                fontSize: 'clamp(0.875rem, 2vw, 1rem)'
+              }}>
+                <span style={{ fontWeight: '500' }}>Costo Equipos:</span>
+                <span style={{ fontWeight: '600' }}>S/ {costoTotalEquipos.toFixed(2)}</span>
+              </div>
+            )}
 
             {/* ✅ Solo mostrar repuestos si es servicio express */}
             {tipoServicioForm === 'EXPRESS' && costoTotalRepuestos > 0 && (
@@ -2339,7 +2225,7 @@ export default function NuevoServicioPage() {
               }}>
                 <span style={{ fontWeight: '700' }}>SALDO:</span>
                 <span style={{ fontWeight: '700', color: '#ef4444' }}>
-                  S/ {(costoTotalEquipos + serviciosAdicionales.reduce((sum, s) => sum + s.precio, 0) - parseFloat(aCuenta || '0')).toFixed(2)}
+                  S/ {(costoTotalEquipos + costoTotalRepuestos + serviciosAdicionales.reduce((sum, s) => sum + s.precio, 0) - parseFloat(aCuenta || '0')).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -2748,6 +2634,8 @@ export default function NuevoServicioPage() {
       </div>
       )}
 
+      {/* Costo - Ocultar en EXPRESS */}
+      {tipoServicioForm !== 'EXPRESS' && (
       <div>
         <h4 style={{
           fontSize: isMobile ? '0.9rem' : '0.95rem',
@@ -2795,6 +2683,7 @@ export default function NuevoServicioPage() {
           S/ {parseFloat(costoServicio || '0').toFixed(2)}
         </div>
       </div>
+      )}
     </div>
 
     {/* BOTONES DE ACCIÓN */}

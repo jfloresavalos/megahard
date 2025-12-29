@@ -191,21 +191,6 @@ export async function POST(request: Request) {
       }, { status: 400 })
     }
 
-    // ✅ Validar campos obligatorios para servicio express
-    if (tipoServicioForm === 'EXPRESS') {
-      if (!diagnosticoExpress?.trim()) {
-        return NextResponse.json({
-          success: false,
-          error: 'El diagnóstico es obligatorio para servicios express'
-        }, { status: 400 })
-      }
-      if (!solucionExpress?.trim()) {
-        return NextResponse.json({
-          success: false,
-          error: 'La solución es obligatoria para servicios express'
-        }, { status: 400 })
-      }
-    }
 
     // ✅ Determinar prefijo según tipo de servicio
     let prefijo = 'ST' // TALLER por defecto
@@ -454,7 +439,7 @@ export async function POST(request: Request) {
         estadoAnterior: null,
         estadoNuevo: estadoInicial,
         comentario: tipoServicioForm === 'EXPRESS'
-          ? `⚡ Servicio Express - Completado inmediatamente. Diagnóstico: ${diagnosticoExpress}. Solución: ${solucionExpress}`
+          ? `⚡ Servicio Express - Completado inmediatamente y listo para entrega`
           : `Servicio ${tipoServicioForm} recepcionado`,
         usuarioId: tecnicoId
       }

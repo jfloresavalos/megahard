@@ -41,6 +41,7 @@ export default function BuscadorCliente({
   const [mensaje, setMensaje] = useState('')
   const [clientesEncontrados, setClientesEncontrados] = useState<Cliente[]>([])
   const [mostrarListaClientes, setMostrarListaClientes] = useState(false)
+  const [clienteGenerico, setClienteGenerico] = useState<Cliente | null>(null)
 
   // ✅ Detectar cuando hay datos del cliente precargados (al editar servicio)
   useEffect(() => {
@@ -68,6 +69,26 @@ export default function BuscadorCliente({
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  useEffect(() => {
+    cargarClienteGenerico()
+  }, [])
+
+  const cargarClienteGenerico = async () => {
+    try {
+      const response = await fetch('/api/clientes')
+      const data = await response.json()
+
+      if (data.success) {
+        const generico = data.clientes.find(
+          (c: Cliente) => c.numeroDoc === '00000000'
+        )
+        setClienteGenerico(generico || null)
+      }
+    } catch (error) {
+      console.error('Error al cargar cliente genérico:', error)
+    }
+  }
 
   const buscarCliente = async () => {
     if (!busquedaDni.trim()) {
@@ -189,6 +210,14 @@ export default function BuscadorCliente({
     setMensaje('')
     setClientesEncontrados([])
     setMostrarListaClientes(false)
+  }
+
+  const handleUsarClienteGenerico = () => {
+    if (clienteGenerico) {
+      seleccionarCliente(clienteGenerico)
+      setMensaje('✅ Usando cliente genérico (Sin DNI)')
+      setTimeout(() => setMensaje(''), 3000)
+    }
   }
 
   const validarDocumento = (valor: string, tipo: string) => {
@@ -677,13 +706,18 @@ export default function BuscadorCliente({
 
         {/* Botón Crear Cliente - Solo mostrar si no hay cliente encontrado */}
         {!clienteEncontrado && (
-          <div style={{ marginTop: isMobile ? '0.75rem' : '1rem', textAlign: 'center' }}>
+          <div style={{
+            marginTop: isMobile ? '0.75rem' : '1rem',
+            display: 'flex',
+            gap: '0.5rem',
+            justifyContent: 'center',
+            flexWrap: 'wrap'
+          }}>
             <button
               type="button"
               onClick={handleAbrirModalCrear}
               style={{
-                width: isMobile ? '100%' : 'auto',
-                padding: isMobile ? '0.625rem' : '0.875rem 1.5rem',
+                padding: isMobile ? '0.625rem 1rem' : '0.875rem 1.5rem',
                 backgroundColor: '#10b981',
                 color: 'white',
                 border: 'none',
@@ -691,12 +725,33 @@ export default function BuscadorCliente({
                 cursor: 'pointer',
                 fontSize: isMobile ? '0.85rem' : '0.95rem',
                 fontWeight: '700',
-                boxShadow: isMobile ? '0 2px 4px rgba(16, 185, 129, 0.3)' : '0 4px 6px rgba(16, 185, 129, 0.3)',
+                boxShadow: '0 4px 6px rgba(16, 185, 129, 0.3)',
                 transition: 'all 0.2s'
               }}
             >
               ➕ Crear Nuevo Cliente
             </button>
+
+            {clienteGenerico && (
+              <button
+                type="button"
+                onClick={handleUsarClienteGenerico}
+                style={{
+                  padding: isMobile ? '0.625rem 1rem' : '0.875rem 1.5rem',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: isMobile ? '6px' : '8px',
+                  cursor: 'pointer',
+                  fontSize: isMobile ? '0.85rem' : '0.95rem',
+                  fontWeight: '700',
+                  boxShadow: '0 4px 6px rgba(107, 114, 128, 0.3)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Sin DNI
+              </button>
+            )}
           </div>
         )}
       </div>

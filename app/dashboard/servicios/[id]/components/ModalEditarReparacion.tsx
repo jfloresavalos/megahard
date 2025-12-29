@@ -24,6 +24,7 @@ interface ModalEditarReparacionProps {
     id: string
     numeroServicio: string
     sedeId: string
+    tipoServicioTipo: string
     diagnostico: string | null
     solucion: string | null
     items?: Array<{
@@ -223,14 +224,17 @@ export default function ModalEditarReparacion({ isOpen, onClose, servicio }: Mod
   }
 
   const handleGuardar = async () => {
-  if (!diagnostico.trim()) {
-    alert('⚠️ El diagnóstico es obligatorio')
-    return
-  }
+  // Solo validar diagnóstico y solución si NO es EXPRESS
+  if (servicio.tipoServicioTipo !== 'EXPRESS') {
+    if (!diagnostico.trim()) {
+      alert('⚠️ El diagnóstico es obligatorio')
+      return
+    }
 
-  if (!solucion.trim()) {
-    alert('⚠️ La solución es obligatoria')
-    return
+    if (!solucion.trim()) {
+      alert('⚠️ La solución es obligatoria')
+      return
+    }
   }
 
   setLoading(true)
@@ -324,7 +328,8 @@ export default function ModalEditarReparacion({ isOpen, onClose, servicio }: Mod
 
         {/* Contenido */}
         <div style={{ padding: '1.5rem' }}>
-          {/* Diagnóstico */}
+          {/* Diagnóstico - Solo mostrar si NO es EXPRESS */}
+          {servicio.tipoServicioTipo !== 'EXPRESS' && (
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.875rem' }}>
               Diagnóstico Técnico *
@@ -344,8 +349,10 @@ export default function ModalEditarReparacion({ isOpen, onClose, servicio }: Mod
               }}
             />
           </div>
+          )}
 
-          {/* Solución */}
+          {/* Solución - Solo mostrar si NO es EXPRESS */}
+          {servicio.tipoServicioTipo !== 'EXPRESS' && (
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.875rem' }}>
               Solución Aplicada *
@@ -365,6 +372,7 @@ export default function ModalEditarReparacion({ isOpen, onClose, servicio }: Mod
               }}
             />
           </div>
+          )}
 
           {/* Repuestos */}
           <div style={{ marginBottom: '1.5rem' }}>

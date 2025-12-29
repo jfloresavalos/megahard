@@ -321,7 +321,8 @@ export async function PUT(
       garantiaDias,
       prioridad,
       tecnicoId,
-      equipos = [] // ✅ Array de equipos con sus datos
+      equipos = [], // ✅ Array de equipos con sus datos
+      repuestos = [] // ✅ Array de repuestos
     } = body
 
     // Validar DNI y Celular
@@ -384,11 +385,22 @@ export async function PUT(
         }, 0)
       }
 
-      const costoTotalNum = costoTotalEquipos + costoServiciosAdicionales
+      // ✅ Calcular costo de repuestos
+      let costoRepuestos = 0
+      if (repuestos && Array.isArray(repuestos)) {
+        costoRepuestos = repuestos.reduce((sum: number, repuesto: any) => {
+          const cantidad = parseFloat(repuesto.cantidad) || 0
+          const precio = parseFloat(repuesto.precioUnit) || 0
+          return sum + (cantidad * precio)
+        }, 0)
+      }
+
+      const costoTotalNum = costoTotalEquipos + costoServiciosAdicionales + costoRepuestos
       const aCuentaNum = parseFloat(aCuenta) || 0
       const saldoNum = costoTotalNum - aCuentaNum
 
       dataToUpdate.costoServicio = costoTotalEquipos
+      dataToUpdate.costoRepuestos = costoRepuestos
       // ✅ Guardar equipos y servicios como JSON
       dataToUpdate.serviciosAdicionales = JSON.stringify({
         equipos: equipos || [],
@@ -473,6 +485,123 @@ export async function PUT(
     })
 
     console.log('✅ [SERVICIO] Servicio actualizado:', servicioActualizado.numeroServicio)
+
+    // ✅ Procesar repuestos (items) si fueron enviados
+    if (repuestos !== undefined) {
+      console.log('🔧 [SERVICIO] Procesando repuestos...')
+
+      // 1. Obtener items actuales del servicio
+      const itemsActuales = await prisma.servicioItem.findMany({
+        where: { servicioId: id },
+        include: { producto: true }
+      })
+
+      console.log('🔧 [SERVICIO] Items actuales:', itemsActuales.length)
+
+      // 2. Restaurar stock de los items que se van a eliminar
+      for (const item of itemsActuales) {
+        const productoSede = await prisma.productoSede.findFirst({
+          where: {
+            productoId: item.productoId,
+            sedeId: servicioExistente.sedeId
+          }
+        })
+
+        if (productoSede) {
+          await prisma.productoSede.update({
+            where: { id: productoSede.id },
+            data: {
+              stock: {
+                increment: item.cantidad
+              }
+            }
+          })
+
+          // Registrar movimiento de stock
+          await prisma.movimientoStock.create({
+            data: {
+              productoId: item.productoId,
+              sedeId: servicioExistente.sedeId,
+              tipo: 'DEVOLUCION_SERVICIO',
+              cantidad: item.cantidad,
+              stockAntes: productoSede.stock,
+              stockDespues: productoSede.stock + item.cantidad,
+              motivo: 'Devolución por edición de servicio',
+              referencia: `Servicio ${servicioActualizado.numeroServicio}`,
+              usuarioId: tecnicoId || servicioExistente.usuarioId
+            }
+          })
+        }
+      }
+
+      // 3. Eliminar todos los items existentes
+      await prisma.servicioItem.deleteMany({
+        where: { servicioId: id }
+      })
+
+      console.log('🔧 [SERVICIO] Items anteriores eliminados y stock restaurado')
+
+      // 4. Crear nuevos items y descontar stock
+      if (Array.isArray(repuestos) && repuestos.length > 0) {
+        console.log('🔧 [SERVICIO] Creando', repuestos.length, 'nuevos items...')
+
+        for (const repuesto of repuestos) {
+          const { productoId, cantidad, precioUnit } = repuesto
+          const cantidadNum = parseFloat(cantidad) || 0
+          const precioNum = parseFloat(precioUnit) || 0
+          const subtotal = cantidadNum * precioNum
+
+          // Crear ServicioItem
+          await prisma.servicioItem.create({
+            data: {
+              servicioId: id,
+              productoId: productoId,
+              cantidad: cantidadNum,
+              precioUnit: precioNum,
+              subtotal: subtotal
+            }
+          })
+
+          // Descontar stock del ProductoSede
+          const productoSede = await prisma.productoSede.findFirst({
+            where: {
+              productoId: productoId,
+              sedeId: servicioExistente.sedeId
+            }
+          })
+
+          if (productoSede) {
+            await prisma.productoSede.update({
+              where: { id: productoSede.id },
+              data: {
+                stock: {
+                  decrement: cantidadNum
+                }
+              }
+            })
+
+            // Crear registro de movimiento de stock
+            await prisma.movimientoStock.create({
+              data: {
+                productoId: productoId,
+                sedeId: servicioExistente.sedeId,
+                tipo: 'USO_SERVICIO',
+                cantidad: cantidadNum,
+                stockAntes: productoSede.stock,
+                stockDespues: productoSede.stock - cantidadNum,
+                motivo: 'Repuesto utilizado en reparación',
+                referencia: `Servicio ${servicioActualizado.numeroServicio}`,
+                usuarioId: tecnicoId || servicioExistente.usuarioId
+              }
+            })
+          } else {
+            console.warn(`⚠️ No se encontró ProductoSede para producto ${productoId} en sede ${servicioExistente.sedeId}`)
+          }
+        }
+
+        console.log('✅ [SERVICIO] Nuevos repuestos procesados exitosamente')
+      }
+    }
 
     return NextResponse.json({
       success: true,

@@ -47,6 +47,23 @@ interface ServicioSeleccionado {
   precio: number
 }
 
+interface Producto {
+  id: string
+  codigo: string
+  nombre: string
+  descripcion: string | null
+  precioVenta: number
+  stock?: number
+}
+
+interface RepuestoSeleccionado {
+  productoId: string
+  producto: Producto
+  cantidad: number
+  precioUnit: number
+  subtotal: number
+}
+
 interface Servicio {
   id: string
   numeroServicio: string
@@ -165,6 +182,13 @@ export default function EditarServicioPage() {
   // Costos
   const [costoServicio, setCostoServicio] = useState('0')
   const [serviciosAdicionales, setServiciosAdicionales] = useState<ServicioSeleccionado[]>([])
+
+  // ✅ REPUESTOS
+  const [productos, setProductos] = useState<Producto[]>([])
+  const [repuestosSeleccionados, setRepuestosSeleccionados] = useState<RepuestoSeleccionado[]>([])
+  const [mostrarSelectorRepuestos, setMostrarSelectorRepuestos] = useState(false)
+  const [busquedaRepuesto, setBusquedaRepuesto] = useState('')
+
   const [metodoPago, setMetodoPago] = useState('EFECTIVO')
   const [aCuenta, setACuenta] = useState('0')
   const [dejaAdelanto, setDejaAdelanto] = useState(false)
@@ -215,6 +239,13 @@ export default function EditarServicioPage() {
       })
     }
   }, [servicioId, sedes])
+
+  // ✅ 3. Cargar productos cuando se selecciona una sede
+  useEffect(() => {
+    if (sedeId) {
+      cargarProductos(sedeId)
+    }
+  }, [sedeId])
 
   const cargarDatos = async () => {
     try {
@@ -411,7 +442,29 @@ export default function EditarServicioPage() {
         setEquipos([])
         setServiciosAdicionales([])
       }
-      
+
+      // ✅ CARGAR REPUESTOS EXISTENTES (items)
+      if (s.items && Array.isArray(s.items) && s.items.length > 0) {
+        const repuestosExistentes = s.items.map((item: any) => ({
+          productoId: item.producto.id,
+          producto: {
+            id: item.producto.id,
+            codigo: item.producto.codigo,
+            nombre: item.producto.nombre,
+            descripcion: item.producto.descripcion || null,
+            precioVenta: parseFloat(item.precioUnit) || 0,
+            stock: item.producto.stock
+          },
+          cantidad: parseFloat(item.cantidad) || 1,
+          precioUnit: parseFloat(item.precioUnit) || 0,
+          subtotal: parseFloat(item.subtotal) || 0
+        }))
+        setRepuestosSeleccionados(repuestosExistentes)
+        console.log('🔧 [EDITAR] Repuestos cargados:', repuestosExistentes.length)
+      } else {
+        setRepuestosSeleccionados([])
+      }
+
       setMetodoPago(s.metodoPago || 'EFECTIVO')
       setACuenta(String(s.aCuenta || 0))
       setDejaAdelanto((s.aCuenta || 0) > 0) // Marcar checkbox si hay adelanto
@@ -664,6 +717,56 @@ const agregarProblema = (problema: any) => {
     setServiciosAdicionales(nuevos)
   }
 
+  // ✅ FUNCIONES PARA REPUESTOS
+  const cargarProductos = async (sedeIdParam: string) => {
+    try {
+      const response = await fetch(`/api/productos?sedeId=${sedeIdParam}`)
+      const data = await response.json()
+      if (data.success) {
+        setProductos(data.productos || [])
+      }
+    } catch (error) {
+      console.error('Error al cargar productos:', error)
+    }
+  }
+
+  const agregarRepuesto = (producto: Producto) => {
+    // Verificar si ya está en la lista
+    const yaExiste = repuestosSeleccionados.find(r => r.productoId === producto.id)
+    if (yaExiste) {
+      alert('Este repuesto ya está agregado. Puedes modificar la cantidad en la lista.')
+      return
+    }
+
+    const nuevoRepuesto: RepuestoSeleccionado = {
+      productoId: producto.id,
+      producto: producto,
+      cantidad: 1,
+      precioUnit: producto.precioVenta,
+      subtotal: producto.precioVenta
+    }
+    setRepuestosSeleccionados([...repuestosSeleccionados, nuevoRepuesto])
+    setMostrarSelectorRepuestos(false)
+  }
+
+  const eliminarRepuesto = (index: number) => {
+    setRepuestosSeleccionados(repuestosSeleccionados.filter((_, i) => i !== index))
+  }
+
+  const actualizarCantidadRepuesto = (index: number, cantidad: number) => {
+    const nuevos = [...repuestosSeleccionados]
+    nuevos[index].cantidad = cantidad
+    nuevos[index].subtotal = cantidad * nuevos[index].precioUnit
+    setRepuestosSeleccionados(nuevos)
+  }
+
+  const actualizarPrecioRepuesto = (index: number, precio: number) => {
+    const nuevos = [...repuestosSeleccionados]
+    nuevos[index].precioUnit = precio
+    nuevos[index].subtotal = nuevos[index].cantidad * precio
+    setRepuestosSeleccionados(nuevos)
+  }
+
   // ✅ EQUIPOS - Funciones para editar/eliminar
   const editarEquipo = (index: number) => {
     const equipo = equipos[index]
@@ -766,15 +869,25 @@ const agregarProblema = (problema: any) => {
     setCostoServicio('0')
   }
 
-  const calcularTotal = () => {
+  const calcularTotal = (): number => {
     // Sumar costos de todos los equipos
-    const costoEquipos = equipos.reduce((sum, eq) => sum + (eq.costoServicio || 0), 0)
-    const costoAdicionales = serviciosAdicionales.reduce((sum, s) => sum + s.precio, 0)
-    return costoEquipos + costoAdicionales
+    const costoEquipos = Array.isArray(equipos)
+      ? equipos.reduce((sum, eq) => sum + (parseFloat(eq.costoServicio) || 0), 0)
+      : 0
+    const costoAdicionales = Array.isArray(serviciosAdicionales)
+      ? serviciosAdicionales.reduce((sum, s) => sum + (s.precio || 0), 0)
+      : 0
+    const costoRepuestos = Array.isArray(repuestosSeleccionados)
+      ? repuestosSeleccionados.reduce((sum, r) => sum + (r.subtotal || 0), 0)
+      : 0
+    const total = costoEquipos + costoAdicionales + costoRepuestos
+    return isNaN(total) || !isFinite(total) ? 0 : total
   }
 
-  const calcularSaldo = () => {
-    return calcularTotal() - (parseFloat(aCuenta) || 0)
+  const calcularSaldo = (): number => {
+    const total = calcularTotal()
+    const cuenta = parseFloat(aCuenta) || 0
+    return total - cuenta
   }
 
   // ✅ VALIDAR SI PUEDE EDITAR COSTOS
@@ -842,6 +955,7 @@ const agregarProblema = (problema: any) => {
           problemasReportados: problemasSeleccionados.map(p => p.id),
           otrosProblemas: descripcionProblema,
           serviciosAdicionales,
+          repuestos: servicioCompleto?.tipoServicio === 'EXPRESS' ? repuestosSeleccionados : [],
           metodoPago: dejaAdelanto ? metodoPago : null,
           fechaEstimada: fechaEstimada ? new Date(fechaEstimada + 'T00:00:00-05:00').toISOString() : null,
           garantiaDias: parseInt(garantiaDias),
@@ -1144,9 +1258,12 @@ const agregarProblema = (problema: any) => {
                     <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
                       Descripción: {equipo.descripcionEquipo}
                     </div>
-                    <div style={{ fontSize: '0.875rem', color: '#10b981', marginTop: '0.25rem', fontWeight: '600' }}>
-                      Costo: S/ {equipo.costoServicio || 0}
-                    </div>
+                    {/* Ocultar costo para EXPRESS */}
+                    {servicioCompleto?.tipoServicio !== 'EXPRESS' && (
+                      <div style={{ fontSize: '0.875rem', color: '#10b981', marginTop: '0.25rem', fontWeight: '600' }}>
+                        Costo: S/ {equipo.costoServicio || 0}
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button
@@ -1410,9 +1527,9 @@ const agregarProblema = (problema: any) => {
 
         {/* PROBLEMAS (igual que nuevo) */}
 
-{/* ✅ SECCIÓN: INFORMACIÓN DE REPARACIÓN (SOLO LECTURA) */}
-{servicioCompleto && (servicioCompleto.diagnostico || servicioCompleto.solucion || 
-  (servicioCompleto.items && servicioCompleto.items.length > 0) || 
+{/* ✅ SECCIÓN: INFORMACIÓN DE REPARACIÓN (SOLO LECTURA) - Oculta para EXPRESS */}
+{servicioCompleto && servicioCompleto.tipoServicio !== 'EXPRESS' && (servicioCompleto.diagnostico || servicioCompleto.solucion ||
+  (servicioCompleto.items && servicioCompleto.items.length > 0) ||
   (servicioCompleto.fotosDespues && servicioCompleto.fotosDespues.length > 0)) && (
   <div style={{
     backgroundColor: '#f0fdf4',
@@ -1646,6 +1763,248 @@ const agregarProblema = (problema: any) => {
           )}
         </div>
 
+        {/* REPUESTOS - Solo para EXPRESS */}
+        {servicioCompleto?.tipoServicio === 'EXPRESS' && (
+          <div style={{
+            backgroundColor: 'white',
+            padding: 'clamp(1rem, 3vw, 2rem)',
+            borderRadius: '8px',
+            marginBottom: '1.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>🔧 REPUESTOS</h2>
+              {puedeEditarCostos && (
+                <button
+                  type="button"
+                  onClick={() => setMostrarSelectorRepuestos(!mostrarSelectorRepuestos)}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: mostrarSelectorRepuestos ? '#ef4444' : '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  {mostrarSelectorRepuestos ? '✕ Cerrar' : '+ Agregar Repuesto'}
+                </button>
+              )}
+            </div>
+
+            {/* SELECTOR DE REPUESTOS */}
+            {mostrarSelectorRepuestos && puedeEditarCostos && (
+              <div style={{
+                backgroundColor: '#f9fafb',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                padding: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Buscar repuesto por nombre o código..."
+                  value={busquedaRepuesto}
+                  onChange={(e) => setBusquedaRepuesto(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '0.95rem',
+                    marginBottom: '0.75rem'
+                  }}
+                />
+
+                <div style={{
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  backgroundColor: 'white'
+                }}>
+                  {productos
+                    .filter(p =>
+                      p.nombre.toLowerCase().includes(busquedaRepuesto.toLowerCase()) ||
+                      p.codigo.toLowerCase().includes(busquedaRepuesto.toLowerCase())
+                    )
+                    .map((producto) => (
+                      <div
+                        key={producto.id}
+                        onClick={() => agregarRepuesto(producto)}
+                        style={{
+                          padding: '0.75rem',
+                          borderBottom: '1px solid #e5e7eb',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.15s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                      >
+                        <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>
+                          {producto.nombre}
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: '0.85rem',
+                          color: '#6b7280',
+                          marginTop: '0.25rem'
+                        }}>
+                          <span>Código: {producto.codigo}</span>
+                          <span style={{ color: '#10b981', fontWeight: '700' }}>
+                            S/ {producto.precioVenta.toFixed(2)}
+                          </span>
+                        </div>
+                        {producto.stock !== undefined && (
+                          <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                            Stock: {producto.stock}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  {productos.filter(p =>
+                    p.nombre.toLowerCase().includes(busquedaRepuesto.toLowerCase()) ||
+                    p.codigo.toLowerCase().includes(busquedaRepuesto.toLowerCase())
+                  ).length === 0 && (
+                    <div style={{
+                      padding: '1rem',
+                      textAlign: 'center',
+                      color: '#6b7280',
+                      fontSize: '0.95rem'
+                    }}>
+                      No se encontraron productos
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* LISTA DE REPUESTOS SELECCIONADOS */}
+            {repuestosSeleccionados.length > 0 && (
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', overflow: 'hidden' }}>
+                {repuestosSeleccionados.map((repuesto, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      padding: '1rem',
+                      borderBottom: index < repuestosSeleccionados.length - 1 ? '1px solid #e5e7eb' : 'none',
+                      backgroundColor: index % 2 === 0 ? 'white' : '#f9fafb'
+                    }}
+                  >
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '2fr 1fr 1fr auto',
+                      gap: '1rem',
+                      alignItems: 'center'
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>
+                          {repuesto.producto.nombre}
+                        </div>
+                        <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                          Código: {repuesto.producto.codigo}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '0.85rem',
+                          color: '#6b7280',
+                          marginBottom: '0.25rem'
+                        }}>
+                          Cantidad
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={repuesto.cantidad}
+                          onChange={(e) => actualizarCantidadRepuesto(index, parseInt(e.target.value) || 1)}
+                          disabled={!puedeEditarCostos}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '0.95rem',
+                            opacity: puedeEditarCostos ? 1 : 0.5,
+                            cursor: puedeEditarCostos ? 'text' : 'not-allowed'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '0.85rem',
+                          color: '#6b7280',
+                          marginBottom: '0.25rem'
+                        }}>
+                          Precio Unit.
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={repuesto.precioUnit}
+                          onChange={(e) => actualizarPrecioRepuesto(index, parseFloat(e.target.value) || 0)}
+                          disabled={!puedeEditarCostos}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '0.95rem',
+                            opacity: puedeEditarCostos ? 1 : 0.5,
+                            cursor: puedeEditarCostos ? 'text' : 'not-allowed'
+                          }}
+                        />
+                      </div>
+
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-end',
+                        gap: '0.5rem'
+                      }}>
+                        <div style={{
+                          fontSize: '1rem',
+                          fontWeight: '700',
+                          color: '#10b981'
+                        }}>
+                          S/ {Number(repuesto.subtotal || 0).toFixed(2)}
+                        </div>
+                        {puedeEditarCostos && (
+                          <button
+                            type="button"
+                            onClick={() => eliminarRepuesto(index)}
+                            style={{
+                              padding: '0.25rem 0.5rem',
+                              backgroundColor: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.85rem',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                          >
+                            ✕ Eliminar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* MÉTODO DE PAGO Y TOTALES */}
         <div style={{
           backgroundColor: 'white',
@@ -1756,18 +2115,43 @@ const agregarProblema = (problema: any) => {
 
           {/* RESUMEN */}
           <div style={{ backgroundColor: '#f9fafb', padding: '1.5rem', borderRadius: '8px', border: '2px solid #e5e7eb' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: 'clamp(0.875rem, 2vw, 1rem)' }}>
-              <span style={{ fontWeight: '500' }}>Costo del Servicio:</span>
-              <span style={{ fontWeight: '600' }}>S/ {parseFloat(costoServicio || '0').toFixed(2)}</span>
-            </div>
+            {/* Mensaje informativo para EXPRESS */}
+            {servicioCompleto?.tipoServicio === 'EXPRESS' && (
+              <div style={{
+                backgroundColor: '#fef3c7',
+                padding: '0.5rem 1rem',
+                borderRadius: '6px',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#92400e',
+                border: '1px solid #fbbf24',
+                marginBottom: '1rem'
+              }}>
+                ℹ️ Costos del servicio express: Servicios Adicionales + Repuestos
+              </div>
+            )}
+            {/* Ocultar Costo del Servicio para EXPRESS */}
+            {servicioCompleto?.tipoServicio !== 'EXPRESS' && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: 'clamp(0.875rem, 2vw, 1rem)' }}>
+                <span style={{ fontWeight: '500' }}>Costo del Servicio:</span>
+                <span style={{ fontWeight: '600' }}>S/ {parseFloat(costoServicio || '0').toFixed(2)}</span>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: 'clamp(0.875rem, 2vw, 1rem)' }}>
               <span style={{ fontWeight: '500' }}>Servicios Adicionales:</span>
               <span style={{ fontWeight: '600' }}>S/ {serviciosAdicionales.reduce((sum, s) => sum + s.precio, 0).toFixed(2)}</span>
             </div>
+            {/* Mostrar Costo de Repuestos solo para EXPRESS */}
+            {servicioCompleto?.tipoServicio === 'EXPRESS' && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: 'clamp(0.875rem, 2vw, 1rem)' }}>
+                <span style={{ fontWeight: '500' }}>Costo de Repuestos:</span>
+                <span style={{ fontWeight: '600' }}>S/ {repuestosSeleccionados.reduce((sum, r) => sum + (r.subtotal || 0), 0).toFixed(2)}</span>
+              </div>
+            )}
             <div style={{ borderTop: '2px solid #d1d5db', paddingTop: '0.75rem', marginTop: '0.75rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: 'clamp(1rem, 3vw, 1.25rem)' }}>
                 <span style={{ fontWeight: '700' }}>TOTAL:</span>
-                <span style={{ fontWeight: '700', color: '#10b981' }}>S/ {calcularTotal().toFixed(2)}</span>
+                <span style={{ fontWeight: '700', color: '#10b981' }}>S/ {Number(calcularTotal() || 0).toFixed(2)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: 'clamp(0.875rem, 2vw, 1rem)' }}>
                 <span style={{ fontWeight: '600' }}>A Cuenta:</span>
@@ -1775,7 +2159,7 @@ const agregarProblema = (problema: any) => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'clamp(1rem, 3vw, 1.25rem)', paddingTop: '0.75rem', borderTop: '1px solid #d1d5db' }}>
                 <span style={{ fontWeight: '700' }}>SALDO:</span>
-                <span style={{ fontWeight: '700', color: '#ef4444' }}>S/ {calcularSaldo().toFixed(2)}</span>
+                <span style={{ fontWeight: '700', color: '#ef4444' }}>S/ {Number(calcularSaldo() || 0).toFixed(2)}</span>
               </div>
             </div>
           </div>

@@ -48,7 +48,8 @@ export async function POST(
       include: {
         cliente: true,
         usuario: true,
-        sede: true
+        sede: true,
+        tipoServicioRelacion: true
       }
     });
 
@@ -75,8 +76,12 @@ export async function POST(
       );
     }
 
-    // ✅ CRÍTICO: Validar que tenga diagnóstico y solución
-    if (!servicio.diagnostico || !servicio.solucion) {
+    // ✅ CRÍTICO: Validar que tenga diagnóstico y solución (excepto EXPRESS)
+    console.log('🔍 Tipo de servicio:', servicio.tipoServicio);
+    console.log('🔍 Diagnóstico:', servicio.diagnostico);
+    console.log('🔍 Solución:', servicio.solucion);
+
+    if (servicio.tipoServicio !== 'EXPRESS' && (!servicio.diagnostico || !servicio.solucion)) {
       return NextResponse.json(
         { error: 'El servicio debe tener diagnóstico y solución antes de entregarse' },
         { status: 400 }
@@ -170,10 +175,10 @@ export async function POST(
     }
 
     // Si pagó el saldo, actualizar aCuenta
-    if (saldoPagado && Number(servicio.saldo) > 0) {
+    if (saldoPagado && nuevoSaldo > 0) {
       updateData.aCuenta = nuevoTotal // ✅ Pagar todo incluyendo productos
       updateData.saldo = 0
-      
+
       if (metodoPagoSaldo) {
         updateData.metodoPagoSaldo = metodoPagoSaldo
       }
